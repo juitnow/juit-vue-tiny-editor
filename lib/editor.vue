@@ -6,6 +6,7 @@
       class="editor"
       :contenteditable="editable ? 'plaintext-only' : 'false'"
       @keydown="onKeydown"
+      @paste="onPaste"
       @input="onInput"
     />
     <div style="position: absolute;">
@@ -71,8 +72,6 @@ function commit(): void {
 /* On changes to the _local_ HTML, trigger an emit on our model value */
 watch(html, (html) => model.value = html)
 
-/* ==== WATCHERS ============================================================ */
-
 /* Watch our model, when the value is different from the local HTML, parse */
 watch([ model, editor ], ([ model, editor ]) => {
   if (! editor) return // not initialized yet, ignore!
@@ -84,6 +83,8 @@ watch([ model, editor ], ([ model, editor ]) => {
   editor.replaceChildren(sanitize(fragment))
   commit()
 })
+
+/* ==== DOM EVENTS ========================================================== */
 
 /** Trigger shortcuts for applying bold, italic, ... */
 function onKeydown(event: KeyboardEvent): void {
@@ -99,6 +100,66 @@ function onKeydown(event: KeyboardEvent): void {
         break
     }
   }
+}
+
+function onPaste(event: ClipboardEvent): void {
+  event.preventDefault()
+  if (! selected.value) return
+  if (! editor.value) return
+
+  // Extract the pasted content as a document fragment
+  const text = event.clipboardData?.getData('text/html') || ''
+  const pasted = new DOMParser().parseFromString(text, 'text/html').body
+
+  // Remove ignorable whitespace nodes
+  const iterator = document.createNodeIterator(pasted, NodeFilter.SHOW_TEXT)
+  for (let node = iterator.nextNode(); node; node = iterator.nextNode()) {
+    if (node.nodeValue?.trim() === '') node.parentElement?.removeChild(node)
+  }
+
+  // Save our selection offsets
+  const offsets = getSelectionOffsets()
+  const beforeLength = editor.value.textContent?.length || 0
+
+  // Split into ranges (before, selected, after)
+  const range = new Range()
+  range.selectNodeContents(editor.value)
+
+  const before = new Range()
+  before.setStart(range.startContainer, range.startOffset)
+  before.setEnd(selected.value.startContainer, selected.value.startOffset)
+
+  const after = new Range()
+  after.setStart(selected.value.endContainer, selected.value.endOffset)
+  after.setEnd(range.endContainer, range.endOffset)
+
+  // Remove back to front...
+  const afterFragment = after.extractContents()
+  const beforeFragment = before.extractContents()
+  range.deleteContents() // wipe everything, including selection
+
+  // Create our fragment
+  const fragment = document.createDocumentFragment()
+
+  // Append our selected fragment, possibly wrapped in a tag
+  fragment.append(pasted.cloneNode(true))
+
+  // Surround with before and after fragments
+  fragment.insertBefore(beforeFragment, fragment.firstChild)
+  fragment.appendChild(afterFragment)
+
+  // Sanitize and insert
+  range.insertNode(sanitize(fragment))
+
+  // Move caret to the end of the pasted content
+  if (offsets) {
+    const afterLength = editor.value.textContent?.length || 0
+    const offset = offsets.end + afterLength - beforeLength
+    restoreSelectionOffsets({ start: offset, end: offset })
+  }
+
+  // All done, we can commmit
+  commit()
 }
 
 function onInput(_event?: Event): void {
@@ -284,13 +345,13 @@ function sanitize(
 
         const child = document.createDocumentFragment()
 
-        if (tagName === 'b') {
+        if ((tagName === 'b') || (tagName === 'strong')) {
           const fragment = sanitizeInternal(element, true, isItalic)
           if (! fragment.hasChildNodes()) continue
 
           if (previous?.tagName === 'b') previous.element.append(fragment)
           else child.append(wrapInternal(fragment, 'b', isBold))
-        } else if (tagName === 'i') {
+        } else if ((tagName === 'i') || (tagName === 'em')) {
           const fragment = sanitizeInternal(element, isBold, true)
           if (! fragment.hasChildNodes()) continue
 
