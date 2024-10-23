@@ -12,9 +12,6 @@
         ITALIC
       </button>
       -
-      <button @click.prevent="editor?.foo()">
-        foo
-      </button>
     </form>
     <tiny-edit
       ref="editor"

@@ -5,8 +5,8 @@
       ref="editor"
       class="editor"
       :contenteditable="editable ? 'plaintext-only' : 'false'"
-      @keydown="keypress"
-      @input="afterInput"
+      @keydown="onKeydown"
+      @input="onInput"
     />
     <div style="position: absolute;">
       editable={{ editable }}
@@ -35,6 +35,7 @@ const model = defineModel({
 })
 
 const props = defineProps({
+  /** A flag indicating if content can be edited (default: `true`) */
   editable: {
     type: Boolean,
     required: false,
@@ -54,13 +55,23 @@ const emit = defineEmits<{
 const editor = ref<HTMLDivElement | null>(null)
 /** Wrapper for our `editable` property */
 const editable = computed(() => props.editable)
+
+/* ==== MODEL (HTML DATA) =================================================== */
+
 /** The HTML string contained by the editor */
 const html = ref('')
 
-/* ==== WATCHERS ============================================================ */
+/** Commit changes to the model converting our editor into HTML */
+function commit(): void {
+  let string = editor.value?.innerHTML || ''
+  if (string === '<br>') string = '' // all content was deleted
+  html.value = string.trimEnd() // remove trailing whitespace
+}
 
 /* On changes to the _local_ HTML, trigger an emit on our model value */
 watch(html, (html) => model.value = html)
+
+/* ==== WATCHERS ============================================================ */
 
 /* Watch our model, when the value is different from the local HTML, parse */
 watch([ model, editor ], ([ model, editor ]) => {
@@ -71,10 +82,11 @@ watch([ model, editor ], ([ model, editor ]) => {
   const fragment = document.createDocumentFragment()
   fragment.append(...body.childNodes)
   editor.replaceChildren(sanitize(fragment))
-  afterInput()
+  commit()
 })
 
-function keypress(event: KeyboardEvent): void {
+/** Trigger shortcuts for applying bold, italic, ... */
+function onKeydown(event: KeyboardEvent): void {
   if (event.metaKey || event.ctrlKey) {
     switch (event.key) {
       case 'b':
@@ -89,10 +101,10 @@ function keypress(event: KeyboardEvent): void {
   }
 }
 
-function afterInput(_event?: Event): void {
+function onInput(_event?: Event): void {
   const event = _event as InputEvent | undefined
   console.log('AFTER INPUT', event?.inputType, event)
-  html.value = editor.value?.innerHTML || ''
+  commit()
 }
 
 /* ==== SELECTION & CARET  ================================================== */
@@ -366,21 +378,16 @@ function applyTag(tagName: FormatTag, remove: boolean): void {
   // Sanitize and insert
   range.insertNode(sanitize(fragment))
 
+  // Done! Restore selection and commit
   restoreSelectionOffsets(offsets)
-
-  // Done!
-  onSelectionChange()
-  afterInput()
+  commit()
 }
 
 defineExpose({
+  /** Toggle _bold_ for the current selected text */
   bold: () => applyTag('b', isBold.value),
+  /** Toggle _italic_ for the current selected text */
   italic: () => applyTag('i', isItalic.value),
-  foo: () => {
-    const offsets = getSelectionOffsets()
-    console.log(offsets)
-    restoreSelectionOffsets(offsets)
-  },
 })
 </script>
 
