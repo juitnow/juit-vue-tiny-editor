@@ -143,7 +143,7 @@ function sanitizeLinks(parent: Node): (Offsets & { href: string })[] {
   // Ranges for all our <a> elements
   const ranges = new Set<Range & { href: string }>()
   for (let node = iterator.nextNode(); node; node = iterator.nextNode()) {
-    const href = (node as HTMLElement).getAttribute('href')
+    const href = (node as Element).getAttribute('href')
     if (href) ranges.add(Object.assign(rangeFromContents(node), { href }))
   }
 
@@ -203,7 +203,7 @@ function sanitizeEmpty(parent: Node): void {
  * @param parent The {@link Element} to sanitize
  * @returns The same `parent` specified as an argument
  */
-export function sanitize(parent: HTMLElement): Element
+export function sanitize(parent: Element): Element
 
 /**
  * Sanitize the contents of a {@link DocumentFragment}  normalizing styles
@@ -214,9 +214,18 @@ export function sanitize(parent: HTMLElement): Element
  */
 export function sanitize(parent: DocumentFragment): DocumentFragment
 
+/**
+ * Sanitize the contents of an {@link Element} or {@link DocumentFragment}
+ * normalizing styles (bold, italic, ...) and links.
+ *
+ * @param parent The {@link Element} or {@link DocumentFragment} to sanitize
+ * @returns The same `parent` specified as an argument
+ */
+export function sanitize(parent: Element | DocumentFragment): Element | DocumentFragment
+
 // Overload implementation
 export function sanitize(
-    parent: HTMLElement | DocumentFragment,
+    parent: Element | DocumentFragment,
 ): Element | DocumentFragment {
   // Cleanup before we start
   parent.normalize()
