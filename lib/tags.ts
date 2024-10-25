@@ -6,14 +6,14 @@ import { sanitize } from './sanitize'
  * with the specified tag name (normally bold, italic, ...)
  *
  * @param parent The editor element (root of all the editable content)
- * @param tagName The tag name to check for (e.g. 'b', 'i', ...)
  * @param range The current selection (if any)
+ * @param tagName The tag name to check for (e.g. 'b', 'i', ...)
  * @returns The parent node with the specified tag name if found
  */
 export function isTagged(
     parent: Node,
-    tagName: string,
     range: Range,
+    tagName: string,
 ): Node | null {
   // Get the parent range, and make sure the selection is within it
   const parentRange = rangeFromContents(parent)
@@ -39,20 +39,20 @@ export function isTagged(
  * selection.
  *
  * @param parent The element whose contents we are modifying
- * @param tagName The tag name (e.g. 'b', 'i', ...) to toggle
  * @param range The range to toggle the tag around
+ * @param tagName The tag name (e.g. 'b', 'i', ...) to toggle
  * @param attributes Any attributes to set on the tag (will be sanitized)
  */
 export function toggleTag(
     parent: Element,
-    tagName: string,
     range: Range,
+    tagName: string,
     attributes: Record<string, string> = {},
 ): void {
   if (range.collapsed) return
   if (! containsRange(parent, range)) return
 
-  const ancestor = isTagged(parent, tagName, range)
+  const ancestor = isTagged(parent, range, tagName)
 
   const ancestorRange = ancestor ?
       rangeFromNode(ancestor) :

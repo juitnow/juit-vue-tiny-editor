@@ -28,14 +28,14 @@ describe('Tags', () => {
     range.setStart(content, 0)
     range.setEnd(content, content.length)
 
-    expect(isTagged(document.body, 'b', range)).toBe(styled)
-    expect(isTagged(styled, 'b', range)).toBe(styled)
+    expect(isTagged(document.body, range, 'b')).toBe(styled)
+    expect(isTagged(styled, range, 'b')).toBe(styled)
 
     range.setStart(before, 3)
     range.setEnd(after, 3)
 
-    expect(isTagged(document.body, 'b', range)).toBe(null)
-    expect(isTagged(styled, 'b', range)).toBe(null)
+    expect(isTagged(document.body, range, 'b')).toBe(null)
+    expect(isTagged(styled, range, 'b')).toBe(null)
   })
 
   it('should add a tag', () => {
@@ -43,7 +43,7 @@ describe('Tags', () => {
     range.setStart(content, 0)
     range.setEnd(content, content.length)
 
-    toggleTag(document.body, 'i', range)
+    toggleTag(document.body, range, 'i')
 
     expect(document.body.innerHTML).toBe('before<b><i>content</i></b>after')
   })
@@ -53,7 +53,7 @@ describe('Tags', () => {
     range.setStart(content, 0)
     range.setEnd(content, content.length)
 
-    toggleTag(document.body, 'a', range, { href: 'https://example.com', name: 'example' })
+    toggleTag(document.body, range, 'a', { href: 'https://example.com', name: 'example' })
 
     expect(document.body.innerHTML).toBe('before<b><a href="https://example.com">content</a></b>after')
   })
@@ -63,7 +63,7 @@ describe('Tags', () => {
     range.setStart(content, 0)
     range.setEnd(content, content.length)
 
-    toggleTag(document.body, 'b', range)
+    toggleTag(document.body, range, 'b')
 
     expect(document.body.innerHTML).toBe('beforecontentafter')
   })
@@ -73,7 +73,7 @@ describe('Tags', () => {
     range.setStart(before, 3)
     range.setEnd(content, 3)
 
-    toggleTag(document.body, 'i', range)
+    toggleTag(document.body, range, 'i')
 
     expect(document.body.innerHTML).toBe('bef<i>ore<b>con</b></i><b>tent</b>after')
   })
@@ -83,7 +83,7 @@ describe('Tags', () => {
     range.setStart(before, 3)
     range.setEnd(content, 3)
 
-    toggleTag(styled, 'i', range)
+    toggleTag(styled, range, 'i')
 
     expect(document.body.innerHTML).toBe('before<b>content</b>after')
   })
@@ -93,7 +93,7 @@ describe('Tags', () => {
     range.setStart(content, 3)
     range.setEnd(content, 3)
 
-    toggleTag(document.body, 'i', range)
+    toggleTag(document.body, range, 'i')
 
     expect(document.body.innerHTML).toBe('before<b>content</b>after')
   })
