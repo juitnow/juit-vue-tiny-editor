@@ -1,6 +1,6 @@
 import vue from '@vitejs/plugin-vue'
-import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
+import { defineConfig } from 'vitest/config'
 
 // See: https://vitejs.dev/config/
 export default defineConfig({
@@ -17,6 +17,19 @@ export default defineConfig({
       output: {
         globals: { vue: 'Vue' },
       },
+    },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    include: [ 'lib/**/*.test.ts' ],
+    coverage: {
+      provider: 'v8',
+      reporter: [ 'text', 'html' ],
+      reportsDirectory: 'coverage',
+      cleanOnRerun: true,
+      include: [ 'lib' ],
+      reportOnFailure: true,
     },
   },
   plugins: [ vue(), dts({
