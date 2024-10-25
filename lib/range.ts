@@ -45,7 +45,7 @@ export function containsRange(
  * @returns A new {@link Range} created with `selectNode(...)`
  */
 export function rangeFromNode(node: Node): Range {
-  const range = new Range()
+  const range = document.createRange()
   range.selectNode(node)
   return range
 }
@@ -58,7 +58,7 @@ export function rangeFromNode(node: Node): Range {
  * @returns A new {@link Range} created with `selectNodeContents(...)`
  */
 export function rangeFromContents(node: Node): Range {
-  const range = new Range()
+  const range = document.createRange()
   range.selectNodeContents(node)
   return range
 }
@@ -78,14 +78,14 @@ export function getRangeOffsets(
 
   const result = { start: 0, end: 0, backwards: range.backwards }
 
-  const start = new Range()
+  const start = document.createRange()
   start.setStart(parent, 0)
   start.setEnd(range.startContainer, range.startOffset)
   result.start = result.end = start.toString().length
 
   if (range.collapsed) return result
 
-  const end = new Range()
+  const end = document.createRange()
   end.setStart(parent, 0)
   end.setEnd(range.endContainer, range.endOffset)
   result.end = end.toString().length
