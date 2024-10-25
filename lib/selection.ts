@@ -1,4 +1,4 @@
-import { containsRange, getOffsetsRange, getRangeOffsets, rangeFromContents } from './range'
+import { containsRange, getOffsetsRange, getRangeOffsets } from './range'
 
 import type { DirectedRange, Offsets } from './range'
 
@@ -15,10 +15,8 @@ export function getSelectionRange(
   const selection = document.getSelection()
   if (! selection?.rangeCount) return null
 
-  const parentRange = rangeFromContents(parent)
   const selectionRange = selection.getRangeAt(0)
-
-  if (! containsRange(parentRange, selectionRange)) return null
+  if (! containsRange(parent, selectionRange)) return null
 
   const backwards =
         selection.isCollapsed ? false :
