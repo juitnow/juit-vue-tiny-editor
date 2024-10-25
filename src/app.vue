@@ -53,6 +53,8 @@ this <b>is a</b> ne<b>wli</b>ne
 this is <i>some</i> text
 foo<mention contenteditable="false" ref="mailto:pier">gonzo</mention>flipper
 <div>this is a div</div>
+This is an <a href="https://www.google.com/">anchor <b>with</b> href</a> fooo
+This is an <a name="flubber">anchor with name</a> fooo
 <p>this is a paragraph</p>
 another line`)
 
