@@ -4,7 +4,7 @@ export interface DirectedRange extends Range {
   backwards?: boolean
 }
 
-/** Offsets for a selected region in our editor */
+/** Offsets for a selected region (in characters) */
 export interface Offsets {
   /** The start character position */
   start: number
@@ -74,7 +74,7 @@ export function getRangeOffsets(
     parent: Node,
     range: DirectedRange,
 ): Offsets {
-  if (! containsRange(parent, range)) throw new Error('Range outside editor')
+  if (! containsRange(parent, range)) throw new Error('Range out of bounds')
 
   const result = { start: 0, end: 0, backwards: range.backwards }
 

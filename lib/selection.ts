@@ -3,10 +3,11 @@ import { containsRange, getOffsetsRange, getRangeOffsets, rangeFromContents } fr
 import type { DirectedRange, Offsets } from './range'
 
 /**
- * Retrieve the current selection as a {@link DirectedRange} within our editor
+ * Retrieve the current selection as a {@link DirectedRange} within a parent
+ * {@link Element}
  *
  * @param parent The element defining the boundaries of accepatable selections
- * @returns The current selection as a {@link DirectedRange} if within the editor
+ * @returns The current selection as a {@link DirectedRange} if within bounds
  */
 export function getSelectionRange(
     parent: Element,
@@ -14,10 +15,10 @@ export function getSelectionRange(
   const selection = document.getSelection()
   if (! selection?.rangeCount) return null
 
-  const editorRange = rangeFromContents(parent)
+  const parentRange = rangeFromContents(parent)
   const selectionRange = selection.getRangeAt(0)
 
-  if (! containsRange(editorRange, selectionRange)) return null
+  if (! containsRange(parentRange, selectionRange)) return null
 
   const backwards =
         selection.isCollapsed ? false :
@@ -27,10 +28,11 @@ export function getSelectionRange(
 }
 
 /**
- * Retrieve the current selection as character {@link Offsets} within our editor
+ * Retrieve the current selection as character {@link Offsets} within a parent
+ * {@link Element}
  *
  * @param parent The element defining the boundaries of accepatable selections
- * @returns The current selection as a {@link DirectedRange} if within the editor
+ * @returns The current selection as a {@link DirectedRange} if within bounds
  */
 export function getSelectionOffsets(
     parent: Element,
@@ -40,7 +42,8 @@ export function getSelectionOffsets(
 }
 
 /**
- * Restore the current selection from character {@link Offsets} in the editor
+ * Restore the current selection from character {@link Offsets} in the
+ * specified {@link Element}
  *
  * @param parent The element defining the boundaries of accepatable selections
  * @param offsets The character offsets to restore

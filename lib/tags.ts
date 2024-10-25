@@ -5,7 +5,7 @@ import { sanitize } from './sanitize'
  * Figure out if the current selection entirely enclosed in an element
  * with the specified tag name (normally bold, italic, ...)
  *
- * @param parent The editor element (root of all the editable content)
+ * @param parent The element whose contents we are searching
  * @param range The current selection (if any)
  * @param tagName The tag name to check for (e.g. 'b', 'i', ...)
  * @returns The parent node with the specified tag name if found

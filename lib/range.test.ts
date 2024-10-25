@@ -94,7 +94,7 @@ describe('Range', () => {
     const range = rangeFromContents(editor)
     range.setStart(before, 3)
     range.setEnd(after, 3)
-    expect(() => getRangeOffsets(editor, range)).toThrow('Range outside editor')
+    expect(() => getRangeOffsets(editor, range)).toThrow('Range out of bounds')
   })
 
   it('should calculate the correct range from some offsets', () => {
