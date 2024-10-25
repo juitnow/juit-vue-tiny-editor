@@ -5,8 +5,8 @@ import { defineConfig } from 'vitest/config'
 // See: https://vitejs.dev/config/
 export default defineConfig({
   build: {
+    minify: true,
     sourcemap: true,
-    minify: false,
     lib: {
       entry: 'lib/index.ts',
       name: 'JuitTinyEdit',
@@ -29,6 +29,10 @@ export default defineConfig({
       reportsDirectory: 'coverage',
       cleanOnRerun: true,
       include: [ 'lib' ],
+      exclude: [
+        'lib/**/*.test.ts',
+        'lib/editor.vue', // we always get 100% coverage???
+      ],
       reportOnFailure: true,
     },
   },
