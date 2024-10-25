@@ -66,27 +66,27 @@ export function rangeFromContents(node: Node): Range {
 /**
  * Retrieve the character {@link Offsets} for the specified {@link Range}.
  *
- * @param element The container element for the {@link Range}
+ * @param parent The container {@link Node} for the {@link Range}
  * @param range The {@link Range} to calculate offsets for
  * @returns The {@link Offsets} for the specified {@link Range}
  */
 export function getRangeOffsets(
-    element: HTMLElement,
+    parent: Node,
     range: DirectedRange,
 ): Offsets {
-  if (! containsRange(element, range)) throw new Error('Range outside editor')
+  if (! containsRange(parent, range)) throw new Error('Range outside editor')
 
   const result = { start: 0, end: 0, backwards: range.backwards }
 
   const start = new Range()
-  start.setStart(element, 0)
+  start.setStart(parent, 0)
   start.setEnd(range.startContainer, range.startOffset)
   result.start = result.end = start.toString().length
 
   if (range.collapsed) return result
 
   const end = new Range()
-  end.setStart(element, 0)
+  end.setStart(parent, 0)
   end.setEnd(range.endContainer, range.endOffset)
   result.end = end.toString().length
 
@@ -96,18 +96,18 @@ export function getRangeOffsets(
 /**
  * Return a {@link Range} for the specified character {@link Offsets}.
  *
- * @param element The container element for the {@link Range}
+ * @param parent The container {@link Node} for the {@link Range}
  * @returns The {@link Range} for the specified {@link Offsets}
  */
 export function getOffsetsRange(
-    element: HTMLElement,
+    parent: Node,
     offsets: Offsets,
 ): DirectedRange {
-  const range: DirectedRange = rangeFromContents(element)
+  const range: DirectedRange = rangeFromContents(parent)
   if (offsets.backwards) range.backwards = true
   let { start, end } = offsets
 
-  const iterator = document.createNodeIterator(element, NodeFilter.SHOW_TEXT)
+  const iterator = document.createNodeIterator(parent, NodeFilter.SHOW_TEXT)
   for (
     let text = iterator.nextNode() as Text | null;
     text && ((start >= 0) || (end > 0));

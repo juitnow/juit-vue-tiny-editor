@@ -38,7 +38,7 @@ function maybeWrap(
 }
 
 /**
- * Sanitize a element's content for styles (bold, italic, ...)
+ * Sanitize a {@link Node}'s content for styles (bold, italic, ...)
  *
  * The `state` object is used to track the current state of the sanitizer: if
  * `bold` is `true`, then all nested `<b>` and `<strong>` tags will be stripped,
@@ -49,7 +49,7 @@ function maybeWrap(
  * @returns The sanitized fragment
  */
 function sanitizeStyles(
-    source: Element,
+    parent: Node,
     state: {
       bold?: boolean,
       italic?: boolean,
@@ -57,7 +57,7 @@ function sanitizeStyles(
 ): DocumentFragment {
   const result = document.createDocumentFragment()
 
-  for (const node of source.childNodes) {
+  for (const node of parent.childNodes) {
     // Text nodes are cloned if they have contents
     if (node.nodeType === Node.TEXT_NODE) {
       if ((node as Text).nodeValue) result.append(node.cloneNode())
@@ -127,14 +127,14 @@ function sanitizeStyles(
 }
 
 /**
- * Find the various links in an element, and return their offsets and hrefs.
+ * Find the various links in a {@link Node}, and return their offsets and hrefs.
  *
- * @param element The element for which links will be sanitized
+ * @param parent The {@link Node} for which links will be sanitized
  * @returns An array of offsets and related hrefs of all links
  */
-function sanitizeLinks(element: HTMLElement): (Offsets & { href: string })[] {
+function sanitizeLinks(parent: Node): (Offsets & { href: string })[] {
   // An iterator over all the <a> elements
-  const iterator = document.createNodeIterator(element, NodeFilter.SHOW_ELEMENT, (node) => {
+  const iterator = document.createNodeIterator(parent, NodeFilter.SHOW_ELEMENT, (node) => {
     return node.nodeName.toLowerCase() === 'a' ?
       NodeFilter.FILTER_ACCEPT :
       NodeFilter.FILTER_SKIP
@@ -160,7 +160,7 @@ function sanitizeLinks(element: HTMLElement): (Offsets & { href: string })[] {
   const offsets = [ ...ranges ]
       // Compute offsets for all the ranges
       .map((range) => {
-        const offsets = getRangeOffsets(element, range)
+        const offsets = getRangeOffsets(parent, range)
         return { ...offsets, href: range.href }
       })
       // See if we need to merge consecutive <a> with the same href
@@ -182,34 +182,55 @@ function sanitizeLinks(element: HTMLElement): (Offsets & { href: string })[] {
 }
 
 /**
- * Strip all empty elements out from our tree.
+ * Strip all empty elements out from the children of a specified {@link Node}.
  *
- * @param element The element to sanitize
+ * @param parent The {@link Node} to sanitize
  */
-function sanitizeEmpty(element: HTMLElement): void {
-  element.normalize()
+function sanitizeEmpty(parent: Node): void {
+  parent.normalize()
 
-  const iterator = document.createNodeIterator(element, NodeFilter.SHOW_ELEMENT)
+  const iterator = document.createNodeIterator(parent, NodeFilter.SHOW_ELEMENT)
   for (let node = iterator.nextNode(); node; node = iterator.nextNode()) {
     if (node.hasChildNodes()) continue
     node.parentNode?.removeChild(node)
   }
 }
 
-export function sanitize(element: HTMLElement): void {
+/**
+ * Sanitize the contents of a {@link Element}  normalizing styles (bold,
+ * italic, ...) and links.
+ *
+ * @param parent The {@link Element} to sanitize
+ * @returns The same `parent` specified as an argument
+ */
+export function sanitize(parent: HTMLElement): Element
+
+/**
+ * Sanitize the contents of a {@link DocumentFragment}  normalizing styles
+ * (bold, italic, ...) and links.
+ *
+ * @param parent The {@link DocumentFragment} to sanitize
+ * @returns The same `parent` specified as an argument
+ */
+export function sanitize(parent: DocumentFragment): DocumentFragment
+
+// Overload implementation
+export function sanitize(
+    parent: HTMLElement | DocumentFragment,
+): Element | DocumentFragment {
   // Cleanup before we start
-  element.normalize()
+  parent.normalize()
 
   // Save any and all links
-  const offsets = sanitizeLinks(element)
+  const offsets = sanitizeLinks(parent)
 
   // Sanitize the content and replace our contents
-  const sanitized = sanitizeStyles(element)
-  element.replaceChildren(sanitized)
+  const sanitized = sanitizeStyles(parent)
+  parent.replaceChildren(sanitized)
 
   // Restore the links
   offsets.forEach((offsets) => {
-    const range = getOffsetsRange(element, offsets)
+    const range = getOffsetsRange(parent, offsets)
     const wrapped = range.extractContents()
     const link = document.createElement('a')
     link.setAttribute('href', offsets.href)
@@ -219,5 +240,8 @@ export function sanitize(element: HTMLElement): void {
 
   // Cleanup any empty elements which might have been introduced
   // when restoring the links above
-  sanitizeEmpty(element)
+  sanitizeEmpty(parent)
+
+  // Return the same element we were given
+  return parent
 }
