@@ -1,29 +1,34 @@
-import { containsRange, getOffsetsRange, getRangeOffsets, rangeFromContents } from './range'
+import { containsRange, getRangeOffsets, rangeFromContents } from './range'
 import { sanitize } from './sanitize'
 
-import type { DirectedRange } from './range'
+import type { Offsets } from './range'
 
 export function replaceRange(
     parent: Element | DocumentFragment,
     range: Range,
-    html: string,
-): DirectedRange {
-  if (! containsRange(parent, range)) throw new Error('Range out of bounds')
+    html: DocumentFragment | string,
+): Offsets {
+  // let html: DocumentFragment
 
-  // Parse our HTML
-  const body = new DOMParser().parseFromString(html, 'text/html').body
-  console.log('PARSED', body.innerHTML)
-  const pasted = document.createDocumentFragment()
-  pasted.append(...body.childNodes)
+  if (typeof html === 'string') {
+    if (! containsRange(parent, range)) throw new Error('Range out of bounds')
 
-  // Trim any empty text nodes to an empty string
-  const iterator = document.createNodeIterator(pasted, NodeFilter.SHOW_TEXT)
-  for (let node = iterator.nextNode(); node; node = iterator.nextNode()) {
-    if (! node.nodeValue?.trim()) node.nodeValue = ''
+    // Parse our HTML
+    const body = new DOMParser().parseFromString(html, 'text/html').body
+    html = document.createDocumentFragment()
+    html.append(...body.childNodes)
+
+    // Trim any empty text nodes to an empty string
+    const iterator = document.createNodeIterator(html, NodeFilter.SHOW_TEXT)
+    for (let node = iterator.nextNode(); node; node = iterator.nextNode()) {
+      if (! node.nodeValue?.trim()) node.nodeValue = ''
+    }
+
+    // Wipe empty text nodes
+    html.normalize()
+  // } else {
+  //   html = html
   }
-
-  // Wipe empty text nodes
-  pasted.normalize()
 
   // Save our selection offsets
   const offsets = getRangeOffsets(parent, range)
@@ -46,13 +51,14 @@ export function replaceRange(
 
   // Re-add all our content and sanitize
   parent.replaceChildren() // wipe everything
-  parent.append(before, pasted, after)
+  parent.append(before, html, after)
   sanitize(parent)
 
   // Adjust our selection offsets depending on pasted data
   const afterLength = parent.textContent?.length || 0
-  offsets.end = offsets.end + afterLength - beforeLength
+  return { ...offsets, end: offsets.end + afterLength - beforeLength }
+  // offsets.end = offsets.end + afterLength - beforeLength
 
-  // Return a new range for the pasted content
-  return getOffsetsRange(parent, offsets)
+  // // Return a new range for the pasted content
+  // return getOffsetsRange(parent, offsets)
 }
