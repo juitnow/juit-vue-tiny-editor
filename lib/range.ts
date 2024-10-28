@@ -64,6 +64,28 @@ export function rangeFromContents(node: Node): Range {
 }
 
 /**
+ * Retrieve the characters contained in a parent {@link Node} up to the
+ * specified {@link Node} and offset.
+ */
+export function getCharacters(
+    parent: Node,
+    child: Node,
+    offset: number,
+): string {
+  const parentRange = rangeFromContents(parent)
+
+  if (! parentRange.isPointInRange(child, offset)) {
+    throw new Error('Range out of bounds')
+  }
+
+  const range = document.createRange()
+  range.setStart(parent, 0)
+  range.setEnd(child, offset)
+
+  return range.toString()
+}
+
+/**
  * Retrieve the character {@link Offsets} for the specified {@link Range}.
  *
  * @param parent The container {@link Node} for the {@link Range}
@@ -74,22 +96,12 @@ export function getRangeOffsets(
     parent: Node,
     range: DirectedRange,
 ): Offsets {
-  if (! containsRange(parent, range)) throw new Error('Range out of bounds')
-
   const result = { start: 0, end: 0, backwards: range.backwards }
 
-  const start = document.createRange()
-  start.setStart(parent, 0)
-  start.setEnd(range.startContainer, range.startOffset)
-  result.start = result.end = start.toString().length
-
+  result.start = result.end = getCharacters(parent, range.startContainer, range.startOffset).length
   if (range.collapsed) return result
 
-  const end = document.createRange()
-  end.setStart(parent, 0)
-  end.setEnd(range.endContainer, range.endOffset)
-  result.end = end.toString().length
-
+  result.end = getCharacters(parent, range.endContainer, range.endOffset).length
   return result
 }
 
