@@ -14,7 +14,7 @@ export function isTagged(
     parent: Node,
     range: Range,
     tagName: string,
-): Node | null {
+): Element | null {
   // Get the parent range, and make sure the selection is within it
   const parentRange = rangeFromContents(parent)
   if (! containsRange(parent, range)) return null
@@ -25,7 +25,7 @@ export function isTagged(
   while (ancestor && parentRange.intersectsNode(ancestor)) {
     if ((ancestor.nodeType === Node.ELEMENT_NODE) &&
         (ancestor.nodeName.toLowerCase() === tagName)) {
-      return ancestor
+      return ancestor as Element
     }
     ancestor = ancestor.parentNode
   }
