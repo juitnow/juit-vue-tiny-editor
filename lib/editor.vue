@@ -1,27 +1,50 @@
 <template>
-  <div>
+  <div class="editxx">
+    <!-- our mentions popup -->
+    <div ref="popupRef" class="mentions-popup">
+      <div ref="listRef" class="mentions-list">
+        <div
+          v-for="(mention, i) in mentionable"
+          :key="i"
+          :class="{ 'mentions-selected': mentionsIndex === i }"
+          class="mentions-entry"
+          @mousedown="insertMention(mention[0], mention[1])"
+        >
+          <span class="mentions-text">{{ mention[1] }}</span>
+          <span class="mentions-ref">&nbsp;{{ mention[0] }}</span>
+        </div>
+      </div>
+      <div v-if="! mentionsAvailable" class="mentions-waiting">
+        {{ mentionsText }}{{ dotsString }}
+      </div>
+      <div v-else-if="! mentionable.length" class="mentions-none">
+        {{ mentionsText }}
+      </div>
+    </div>
+
+    <!-- our editor -->
     <div
-      id="editor"
-      ref="editor"
+      ref="editorRef"
       class="editor"
       :contenteditable="editable ? 'plaintext-only' : 'false'"
-      @keydown="onKeydown"
-      @paste="onPaste"
-      @input="onInput"
+      @input="onInput($event as InputEvent)"
+      @keydown="onKeydown($event)"
+      @paste="onPaste($event)"
     />
-    <div style="position: absolute;">
-      editable={{ editable }}
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 
-import { getRangeOffsets } from './range'
+import { getCharacters, getOffsetsRange, getRangeOffsets } from './range'
+import { replaceRange } from './replace'
 import { sanitize } from './sanitize'
 import { getSelectionRange, restoreSelection } from './selection'
 import { isTagged, toggleTag } from './tags'
+
+import type { PropType } from 'vue'
+import type { Offsets } from './range'
 
 /* ==== DEFS ================================================================ */
 
@@ -40,54 +63,121 @@ const props = defineProps({
     required: false,
     default: true,
   },
+  mentions: {
+    type: Object as PropType<Record<string, string> | null>,
+    required: false,
+    default: () => ({}),
+  },
 })
 
 const emit = defineEmits<{
   isBold: [ boolean ],
   isItalic: [ boolean ],
   hasSelection: [ boolean ],
+  mention: [ string ],
 }>()
 
 /* ==== REFS ================================================================ */
 
 /** Reference to our content editable DIV */
-const editor = ref<HTMLDivElement | null>(null)
+const editorRef = ref<HTMLDivElement | null>(null)
+/** Reference to our popup */
+const popupRef = ref<HTMLDivElement | null>(null)
+/** Reference to our mentions list (in the popup) DIV */
+const listRef = ref<HTMLDivElement | null>(null)
+
 /** Wrapper for our `editable` property */
 const editable = computed(() => props.editable)
-
-/* Check that the editor is properly referenced */
-onMounted(() => {
-  if (! editor.value) throw new Error('Editor not referenced')
-})
-
-/* ==== MODEL (HTML DATA) =================================================== */
 
 /** The HTML string contained by the editor */
 const html = ref('')
 
+/** The `Range` of the current selection, if within our editor */
+const selected = shallowRef<Range & { backwards?: boolean } | null>(null)
+
+const mentionsRange = shallowRef<Range | null>(null)
+const mentionsText = computed(() => mentionsRange.value?.toString() || '')
+
+const mentionable = computed(() => {
+  const text = mentionsText.value.substring(1).toLowerCase()
+
+  if (! props.mentions) return []
+  return Object.entries(props.mentions)
+      .filter(([ _, name ]) => name.toLowerCase().startsWith(text))
+      .sort(([ _a, a ], [ _b, b ]) => a.localeCompare(b))
+})
+
+const mentionsAvailable = computed(() => !! props.mentions)
+
+const dots = ref(0)
+
+let interval: ReturnType<typeof setInterval> | null = null
+
+const dotsString = computed(() => '.' + '.'.repeat(dots.value % 5))
+const mentionsIndex = ref(0)
+
+
+/** Whether the current selection is all bold */
+const isBold = ref(false)
+/** Whether the current selection is all italic */
+const isItalic = ref(false)
+/** Whether the current selection is a link */
+const isLink = ref('')
+
+
+/* ==== FUNCTIONS =========================================================== */
+
 /** Commit changes to the model converting our editor into HTML */
 function commit(): void {
-  let string = editor.value?.innerHTML || ''
+  let string = editorRef.value?.innerHTML || ''
   if (string === '<br>') string = '' // all content was deleted
   html.value = string.trimEnd() // remove trailing whitespace
 }
 
-/* On changes to the _local_ HTML, trigger an emit on our model value */
-watch(html, (html) => {
-  model.value = html
-})
 
-/* Watch our model, when the value is different from the local HTML, parse */
-watch([ model, editor ], ([ model, editor ]) => {
-  if (! editor) return // not initialized yet, ignore!
-  if (model === html.value) return // no changes, ignore!
+function computeMention(): void {
+  if (mentionsRange.value && selected.value?.collapsed) {
+    const range = mentionsRange.value.cloneRange()
+    range.setEnd(selected.value.startContainer, selected.value.startOffset)
+    if (range.toString().match(/^@[^\r\n]*$/)) {
+      mentionsRange.value = range
+      return
+    }
+  }
+  mentionsRange.value = null
+}
 
-  const body = new DOMParser().parseFromString(model, 'text/html').body
-  sanitize(body)
-  editor.replaceChildren(...body.childNodes)
+function insertMention(ref: string, value: string): void {
+  if (! editorRef.value) return
+  if (! mentionsRange.value) return
 
+  const editor = editorRef.value
+
+  const fragment = document.createDocumentFragment()
+  const element = document.createElement('mention')
+  element.setAttribute('ref', ref)
+  element.append(value)
+  fragment.append(element, ' ')
+
+  const offsets = replaceRange(editor, mentionsRange.value, fragment)
+  restoreSelection(editor, offsets)
+  document.getSelection()?.collapseToEnd()
+  mentionsRange.value = null
   commit()
-})
+}
+
+/** Apply a "tag" (bold, italic, ...) */
+function applyTag(tagName: string, attributes: Record<string, string> = {}): void {
+  if (! editorRef.value) return
+  if (! selected.value) return
+
+  const editor = editorRef.value
+
+  const offsets = getRangeOffsets(editor, selected.value)
+  toggleTag(editor, selected.value, tagName, attributes)
+  if (offsets) restoreSelection(editor, offsets)
+  commit()
+}
 
 /* ==== DOM EVENTS ========================================================== */
 
@@ -100,161 +190,331 @@ function onKeydown(event: KeyboardEvent): void {
         event.preventDefault()
         break
       case 'i':
-        applyTag('i', { href: 'https://www.google.com/' })
+        applyTag('i')
         event.preventDefault()
         break
-      case 'l':
-        applyTag('a')
+    }
+  } else if (mentionsRange.value) {
+    switch (event.key) {
+      case 'Home':
+        mentionsIndex.value = 0
         event.preventDefault()
         break
+      case 'ArrowUp':
+        mentionsIndex.value = Math.max(mentionsIndex.value - 1, 0)
+        event.preventDefault()
+        break
+      case 'PageUp':
+        mentionsIndex.value = Math.max(mentionsIndex.value - 4, 0)
+        event.preventDefault()
+        break
+      case 'ArrowDown':
+        mentionsIndex.value = Math.min(mentionsIndex.value + 1, mentionable.value.length - 1)
+        event.preventDefault()
+        break
+      case 'PageDown':
+        mentionsIndex.value = Math.min(mentionsIndex.value + 4, mentionable.value.length - 1)
+        event.preventDefault()
+        break
+      case 'End':
+        mentionsIndex.value = mentionable.value.length - 1
+        event.preventDefault()
+        break
+      case 'Escape':
+        mentionsRange.value = null
+        event.preventDefault()
+        break
+      case 'Enter': {
+        const mention = mentionable.value[mentionsIndex.value]!
+        if (mention) insertMention(mention[0], mention[1])
+        event.preventDefault()
+        break
+      }
     }
   }
 }
 
 function onPaste(event: ClipboardEvent): void {
   event.preventDefault()
-  if (! editor.value) return
+  if (! editorRef.value) return
   if (! selected.value) return
 
-  // Extract the pasted content as a document fragment
   const text = event.clipboardData?.getData('text/html') || ''
-  const pasted = new DOMParser().parseFromString(text, 'text/html').body
-  sanitize(pasted)
+  const offsets = replaceRange(editorRef.value, selected.value, text)
 
-  // Remove ignorable whitespace nodes
-  const iterator = document.createNodeIterator(pasted, NodeFilter.SHOW_TEXT)
-  for (let node = iterator.nextNode(); node; node = iterator.nextNode()) {
-    if (node.nodeValue?.trim() === '') node.parentElement?.removeChild(node)
-  }
-
-  // Save our selection offsets
-  const offsets = getRangeOffsets(editor.value, selected.value)
-  const beforeLength = editor.value.textContent?.length || 0
-
-  // Split into ranges (before, selected, after)
-  const range = new Range()
-  range.selectNodeContents(editor.value)
-
-  const before = new Range()
-  before.setStart(range.startContainer, range.startOffset)
-  before.setEnd(selected.value.startContainer, selected.value.startOffset)
-
-  const after = new Range()
-  after.setStart(selected.value.endContainer, selected.value.endOffset)
-  after.setEnd(range.endContainer, range.endOffset)
-
-  // Remove back to front...
-  const afterFragment = after.extractContents()
-  const beforeFragment = before.extractContents()
-  range.deleteContents() // wipe everything, including selection
-
-  // Create our fragment
-  const fragment = document.createDocumentFragment()
-
-  // Append our selected fragment, possibly wrapped in a tag
-  fragment.append(pasted.cloneNode(true))
-
-  // Surround with before and after fragments
-  fragment.insertBefore(beforeFragment, fragment.firstChild)
-  fragment.appendChild(afterFragment)
-
-  // Sanitize and insert
-  range.insertNode(fragment)
-
-  // Move caret to the end of the pasted content
-  if (offsets) {
-    const afterLength = editor.value.textContent?.length || 0
-    const offset = offsets.end + afterLength - beforeLength
-    restoreSelection(editor.value, { start: offset, end: offset })
-  }
-
-  // All done, we can commmit
+  if (offsets) restoreSelection(editorRef.value, offsets)
+  document.getSelection()?.collapseToEnd()
   commit()
 }
 
-function onInput(_event: Event): void {
-  // const event = _event as InputEvent
+function onInput(event: InputEvent): void {
+  if (! editorRef.value) return
+
+  // When the input is "@" we might want to trigger a mention
+  if ((! isLink.value) && (! mentionsRange.value) && (event.data === '@') && (event.inputType === 'insertText')) {
+    const selection = document.getSelection()
+    if (! selection?.anchorNode) return
+    const text = getCharacters(editorRef.value, selection.anchorNode, selection.anchorOffset)
+    if (text.match(/(\s|^)@$/)) {
+      const start = text.length === 1 ? 0 : text.length - 1
+      const end = text.length
+      const offsets: Offsets = { start, end }
+      mentionsRange.value = getOffsetsRange(editorRef.value, offsets)
+    }
+  } else {
+    computeMention()
+  }
+
+  // Commit the changes
   commit()
 }
 
-/* ==== SELECTION & CARET  ================================================== */
-
-/** The `Range` of the current selection, if within our editor */
-const selected = shallowRef<Range & { backwards?: boolean } | null>(null)
 
 /* Update the `selected` Range when the document selection changes */
-function onSelectionChange(): void {
-  selected.value = editor.value ? getSelectionRange(editor.value) : null
+function onSelectionChange(_event: Event): void {
+  selected.value = editorRef.value ? getSelectionRange(editorRef.value) : null
+  computeMention()
 }
 
-onMounted(() => document.addEventListener('selectionchange', onSelectionChange))
-onUnmounted(() => document.removeEventListener('selectionchange', onSelectionChange))
+/* ===== WATCHES AND COMPONENT LIFECYCLE ==================================== */
 
-/* ==== SELECTION STATE ===================================================== */
+onMounted(() => {
+  // Bind DOM events
+  document.addEventListener('selectionchange', onSelectionChange)
 
-/** Whether the current selection is all bold */
-const isBold = shallowRef<boolean>(false)
-/** Whether the current selection is all italic */
-const isItalic = shallowRef<boolean>(false)
+  // References to our editor, popup, and list
+  if (! editorRef.value) throw new Error('Editor not referenced')
+  if (! popupRef.value) throw new Error('Popup not referenced')
+  if (! listRef.value) throw new Error('List not referenced')
+  const editor = editorRef.value
+  const popup = popupRef.value
+  const list = listRef.value
 
-/* Watch the selected range and infer state for bold, italic, ... */
-watch(selected, (selected) => {
-  emit('hasSelection', !! selected)
-  if (selected) {
-    isBold.value = editor.value ? (!! isTagged(editor.value, selected, 'b')) : false
-    isItalic.value = editor.value ? (!! isTagged(editor.value, selected, 'i')) : false
-  }
-}, { immediate: true })
+  /* On changes to the _local_ HTML, trigger an emit on our model value */
+  watch(html, (html) => model.value = html)
 
-/* Watch our bold, italic, .. states and emit */
-watch(isBold, (bold) => emit('isBold', bold), { immediate: true })
-watch(isItalic, (italic) => emit('isItalic', italic), { immediate: true })
+  /* Watch our model, when the value is different from the local HTML, parse */
+  watch(model, (model) => {
+    if (model === html.value) return // no changes, ignore!
 
-/* ==== SANITIZATION AND FORMATTING ========================================= */
+    const body = new DOMParser().parseFromString(model, 'text/html').body
+    sanitize(body)
+    editor.replaceChildren(...body.childNodes)
 
-/** Apply a "tag" (bold, italic, ...) */
-function applyTag(tagName: string, attributes: Record<string, string> = {}): void {
-  if (! editor.value) return
-  if (! selected.value) return
-  const offsets = getRangeOffsets(editor.value, selected.value)
-  toggleTag(editor.value, selected.value, tagName, attributes)
-  if (offsets) restoreSelection(editor.value, offsets)
-  commit()
-}
+    commit()
+  }, { immediate: true })
+
+  /* Watch our mentions availability and trigger a waiting animation */
+  watch(mentionsAvailable, (available) => {
+    dots.value = 0
+    if (! available) interval = setInterval(() => dots.value = dots.value + 1, 200)
+    else if (interval) clearInterval(interval)
+  }, { immediate: true })
+
+  /* Watch our mentions index and update the popup */
+  watch([ mentionsIndex, mentionsRange, mentionable ], ([ index, range, mentionable ], [ oldIndex = -1 ]) => {
+    // Make sure that our index is within acceptable bounds
+    if (index >= mentionable.length) index = Math.max(mentionable.length - 1, 0)
+    mentionsIndex.value = index
+
+    // No list or no popup, nothing to do
+    if (! popup) return
+    if (! list) return
+
+    // No range, hide and reset the popup
+    if (! range) {
+      mentionsIndex.value = 0
+      popup.style.display = 'none'
+      popup.style.top = '0'
+      popup.style.left = '0'
+      list.scrollTop = 0
+      return
+    }
+
+    // Wait for the next tick to make sure the DOM is updated
+    nextTick(() => {
+      // Position and show the popup
+      popup.style.display = 'block'
+
+      const rangeRect = range.getBoundingClientRect()
+      const editorRect = editor.getBoundingClientRect()
+
+      const popupStyle = getComputedStyle(popup)
+      const popupWidth = parseInt(popupStyle.width)
+      const popupHeight = parseInt(popupStyle.height)
+
+      const fitsTop = rangeRect.top - popupHeight > editorRect.top
+      const fitsBottom = rangeRect.bottom + popupHeight < editorRect.bottom
+      const fitsRight = rangeRect.left + popupWidth < editorRect.right
+
+      popup.style.top = (! fitsBottom && fitsTop) ?
+      `${rangeRect.top - popupHeight + window.scrollY - 3}px` :
+      `${rangeRect.bottom + window.scrollY + 3}px`
+      popup.style.left = fitsRight ?
+      `${rangeRect.left + window.scrollX}px` :
+      `${editorRect.right - popupWidth - window.scrollX}px`
+
+      // Scroll the list to make sure the selected item is visible
+      const item = list.querySelectorAll('.mentions-entry')[mentionsIndex.value]
+      if (! item) return
+
+      // Get the bounding rectangles for the list and the selected item
+      const listRect = list.getBoundingClientRect()
+      const itemRect = item.getBoundingClientRect()
+
+      // Figure out top and bottom margins for the item
+      const style = getComputedStyle(item)
+      const marginTop = parseInt(style.marginTop)
+      const marginBottom = parseInt(style.marginBottom)
+
+      // Some CSS magic to scroll the list
+      const topTop = itemRect.top - listRect.top
+      const btmBtm = itemRect.bottom - listRect.bottom
+      const relativeBtm = itemRect.bottom - listRect.top
+
+      // Going down
+      if (index > oldIndex) {
+        // Element is hidden below the visible list
+        if (relativeBtm > listRect.height) {
+          list.scrollTop += btmBtm + marginBottom
+          // Element is hidden above the visible list
+        } else if (topTop < 0) {
+          list.scrollTop += topTop - marginTop
+        }
+        // Going up
+      } else {
+        // Element is hidden above the visible list
+        if (topTop < 0) {
+          list.scrollTop += topTop - marginTop
+          // Element is hidden below the visible list
+        } else if (btmBtm > 0) {
+          list.scrollTop += relativeBtm - listRect.height + marginBottom
+        }
+      }
+    })
+  }, { immediate: true })
+
+  /* Watch the selected range and infer state for bold, italic, ... */
+  watch(selected, (selected) => {
+    emit('hasSelection', !! selected)
+    if (selected) {
+      isBold.value = !! isTagged(editor, selected, 'b')
+      isItalic.value = !! isTagged(editor, selected, 'i')
+      isLink.value = isTagged(editor, selected, 'a')?.getAttribute('href') || ''
+    } else {
+      isBold.value = false
+      isItalic.value = false
+      isLink.value = ''
+    }
+  }, { immediate: true })
+
+  /* Watch our local refs emit */
+  watch(isBold, (bold) => emit('isBold', bold), { immediate: true })
+  watch(isItalic, (italic) => emit('isItalic', italic), { immediate: true })
+  watch(isItalic, (italic) => emit('isItalic', italic), { immediate: true })
+  watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: true })
+})
+
+onUnmounted(() => {
+  document.removeEventListener('selectionchange', onSelectionChange)
+  if (interval) clearInterval(interval)
+})
+
+/* ===== EXPOSED METHODS ==================================================== */
 
 defineExpose({
   /** Toggle _bold_ for the current selected text */
   bold: () => applyTag('b'),
   /** Toggle _italic_ for the current selected text */
   italic: () => applyTag('i'),
-  /** Select range from anchor and offset as number of chars in the editor */
-  select: (anchor: number, focus: number) => {
-    if (! editor.value) return
-    if (anchor <= focus) {
-      restoreSelection(editor.value, { start: anchor, end: focus })
-    } else {
-      restoreSelection(editor.value, { start: focus, end: anchor, backwards: true })
-    }
-  },
+  /** Toggle _link_ for the current selected text */
+  link: (href: string) => applyTag('a', { href }),
 })
 </script>
 
 <style lang="pcss" scoped>
+.editxx {
+  display: flex;
+  align-items: stretch;
+}
+
+/** Our mentions popul */
+.mentions-popup {
+  position: absolute;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 0.25em;
+  overflow: hidden;
+  display: none;
+  cursor: pointer;
+  min-width: 8em;
+  z-index: 1000;
+
+  /** List of all our available mentions */
+  .mentions-list {
+    overflow: scroll;
+    max-height: 7em;
+    scroll-top: 10px;
+    white-space: nowrap;
+  }
+
+  /** Style for any matching mention entry */
+  .mentions-entry {
+    margin: 5px 0;
+    padding: 0 0.75em;
+    color: #666;
+
+    /** Smaller refs */
+    .mentions-ref {
+      font-size: 0.75em;
+      font-style: italic;
+    }
+
+    /** Extra stuff for selected mention */
+    &.mentions-selected {
+      color: #000;
+      padding: 0 0.75em 0 0;
+      background-color: #ccc;
+
+      /** Tag to highlight the current selected entry */
+      &::before {
+        content: '';
+        background-color: #090;
+        padding: 0em 0.25em 0.05em 0.25em;
+        margin-right: 0.25em;
+      }
+    }
+  }
+
+  .mentions-waiting {
+    margin: 5px 0;
+    padding: 0 0.75em;
+    font-style: italic;
+    color: #666;
+  }
+
+  /** Style for when no mention matches our input */
+  .mentions-none {
+    margin: 5px 0;
+    padding: 0 0.75em;
+    font-style: italic;
+    color: #ccc;
+  }
+}
+
 .editor {
   width: 100%;
-  height: 100%;
   background-color: #eee;
   box-sizing: border-box;
   white-space-collapse: preserve;
   padding: 0.25em;
-  /* font-size: 100px; */
 
   &::v-deep mention {
-    background-color: rgba(0, 0, 0, 0.15);
+    background-color: #ccc;
     border-radius: 0.25em;
     padding: 0em 0.4em 0.05em 0;
     margin: 0 0.2em;
-    cursor: pointer;
+    cursor: default;
     user-select: none;
     font-weight: normal;
     font-style: normal;
@@ -263,7 +523,8 @@ defineExpose({
     &::before {
       content: '';
       background-color: #090;
-      padding: 0em 0.4em 0.05em 0;
+      color: #fff;
+      padding: 0em 0.2em 0.05em 0.25em;
       margin-right: 0.25em;
       border-radius: 0.25em 0 0 0.25em;
     }
