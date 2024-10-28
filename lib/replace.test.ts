@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { getOffsetsRange } from './range'
 import { replaceRange } from './replace'
 
 import type { DirectedRange } from './range'
@@ -31,33 +32,25 @@ describe('Replace', () => {
     const result = replaceRange(editor, range, html)
 
     expect(editor.innerHTML).toBe('bef<b>23</b>4<a href="bar">5</a>er')
-    expect(result.startContainer.nodeValue).toBe('23') // first text inserted after stripping "script"
-    expect(result.startOffset).toBe(0)
-    expect(result.endContainer.nodeValue).toBe('5') // last text inserted
-    expect(result.endOffset).toBe(1)
-    expect(result.backwards).toBe(true)
+    expect(result).toEqual({ start: 3, end: 7, backwards: true })
   })
 
   it('should insert and wipe some content', () => {
     const element = document.createElement('div')
 
-    const range = document.createRange()
-    range.setStart(element, 0)
-    range.setEnd(element, 0)
+    const range1 = document.createRange()
+    range1.setStart(element, 0)
+    range1.setEnd(element, 0)
 
-    const result1 = replaceRange(element, range, '<i>new</i>')
+    const result1 = replaceRange(element, range1, '<i>new</i>')
     expect(element.innerHTML).toBe('<i>new</i>')
-    expect(result1.startContainer.nodeValue).toBe('new')
-    expect(result1.startOffset).toBe(0)
-    expect(result1.endContainer.nodeValue).toBe('new')
-    expect(result1.endOffset).toBe(3)
+    expect(result1).toEqual({ start: 0, end: 3 })
 
-    const result2 = replaceRange(element, result1, '')
+    const range2 = getOffsetsRange(element, result1)
+
+    const result2 = replaceRange(element, range2, '')
     expect(element.innerHTML).toBe('')
-    expect(result2.startContainer).toBe(element)
-    expect(result2.startOffset).toBe(0)
-    expect(result2.endContainer).toBe(element)
-    expect(result2.endOffset).toBe(0)
+    expect(result2).toEqual({ start: 0, end: 0 })
   })
 
   it('should fail when range is out of bounds some content', () => {
