@@ -1,4 +1,4 @@
-import { containsRange, getOffsetsRange, getRangeOffsets, rangeFromContents } from './range'
+import { getOffsetsRange, getRangeOffsets, rangeFromContents } from './range'
 
 import type { Offsets } from './range'
 
@@ -137,6 +137,53 @@ function sanitizeStyles(
   return result
 }
 
+/** Merge offsets with HREF (exported for tests) */
+export function mergeOffsets(list: (Offsets & { href: string })[]): (Offsets & { href: string })[] {
+  // Map all our offsets to an array of objects with an index
+  const offsets = list.map((offset, i) => ({ ...offset, index: i }))
+
+  // Sort by start, keep longest first, if seame, the first one has priority
+  offsets.sort((a, b) => {
+    return a.start < b.start ? -1 :
+           a.start > b.start ? 1 :
+           a.end < b.end ? 1 :
+           a.end > b.end ? -1 :
+           /* v8 ignore next 3 */
+           a.index < b.index ? -1 :
+           a.index > b.index ? 1 :
+           0
+  })
+
+  // Find all ranges that are nested/overlapping within another range
+  const nested = new Set<Offsets>()
+
+  for (let i = 0; i < offsets.length; i++) {
+    const outer = offsets[i]!
+    for (let j = i + 1; j < offsets.length; j++) {
+      const inner = offsets[j]!
+      if (nested.has(inner)) continue
+      if (inner.start === inner.end) nested.add(inner)
+      else if ((inner.start >= outer.start) && (inner.start < outer.end)) nested.add(inner)
+      else if ((inner.end >= outer.start) && (inner.end < outer.end)) nested.add(inner)
+    }
+  }
+
+  // All our anchor offsets
+  return offsets
+      // Filter out any nested/overlapping offsets
+      .filter((offset) => ! nested.has(offset))
+      // Join consecutive offsets with the same href
+      .filter((offset, i, offsets) => {
+        const previous = offsets[i - 1]
+        if ((previous?.end === offset.start) && (previous.href === offset.href)) {
+          previous.end = offset.end
+          return false
+        } else {
+          return true
+        }
+      })
+}
+
 /**
  * Find the various links in a {@link Node}, and return their offsets and hrefs.
  *
@@ -144,82 +191,35 @@ function sanitizeStyles(
  * @returns An array of offsets and related hrefs of all links
  */
 function sanitizeLinks(parent: Element): (Offsets & { href: string })[] {
-  // An iterator over all TEXT nodes to match links in content nodes
-  const textIterator = document.createNodeIterator(parent, NodeFilter.SHOW_TEXT, (node) => {
-    return node.parentElement?.nodeName.toLowerCase() === 'a' ? NodeFilter.FILTER_SKIP : NodeFilter.FILTER_ACCEPT
-  })
+  // Process links parsed directly from the text ()
+  const textRanges: (Offsets & { href: string })[] = []
 
-  for (let node = textIterator.nextNode(); node; node = textIterator.nextNode()) {
-    const text = node.nodeValue!
-
-    const match = /(^|\s)(https?:\/\/[^\s]+)($|\s)/.exec(text)
-    if (! match) continue
-
-    const link = match[2]!
-
-    const index = text.indexOf(link)
-    const prefix = text.slice(0, index)
-    const suffix = text.slice(index + link.length)
-
-    const element = document.createElement('a')
-    element.append(link)
-
-    const fragment = document.createDocumentFragment()
-    fragment.append(prefix, element, suffix)
-
-    node.parentElement?.replaceChild(fragment, node)
+  const re = /(https?:\/\/[^\s]+)/gm
+  const plain = parent.textContent!
+  for (let match = re.exec(plain); match; match = re.exec(plain)) {
+    const text = match[1]!
+    const href = parseURL(text)
+    if (href) textRanges.push({ start: match.index, end: match.index + text.length, href })
   }
 
-  // An iterator over all the <a> elements
+  // Process links parsed from <a> elements
+  const linkRanges: (Offsets & { href: string })[] = []
+
   const iterator = document.createNodeIterator(parent, NodeFilter.SHOW_ELEMENT, (node) => {
-    return node.nodeName.toLowerCase() === 'a' ?
-      NodeFilter.FILTER_ACCEPT :
-      NodeFilter.FILTER_SKIP
+    return node.nodeName.toLowerCase() === 'a' ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP
   })
 
-  // Ranges for all our <a> elements
-  const ranges = new Set<Range & { href: string }>()
   for (let node = iterator.nextNode(); node; node = iterator.nextNode()) {
     const element = node as Element
 
-    let href = parseURL(element.textContent)
-    if (! href) href = parseURL(element.getAttribute('href'))
-
-    if (href) ranges.add(Object.assign(rangeFromContents(element), { href }))
+    const href = parseURL(element.getAttribute('href'))
+    if (href) {
+      const range = rangeFromContents(element)
+      linkRanges.push({ ...getRangeOffsets(parent, range), href })
+    }
   }
 
-  // Filter out any ranges that is contained within another range
-  ranges.forEach((outerRange) => {
-    ranges.forEach((innerRange) => {
-      // Here `containsRange` returns `inner` if its the same as `outer`
-      const range = containsRange(outerRange, innerRange)
-      if (range && (range !== outerRange)) ranges.delete(innerRange)
-    })
-  })
-
-  // Convert our ranges to offsets
-  const offsets = [ ...ranges ]
-      // Compute offsets for all the ranges
-      .map((range) => {
-        const offsets = getRangeOffsets(parent, range)
-        return { ...offsets, href: range.href }
-      })
-      // See if we need to merge consecutive <a> with the same href
-      .filter((current, i, offsets) => {
-        const previous = offsets[i - 1]
-
-        // If it ends where this starts, and the href is the same, merge
-        if ((previous?.end === current.start) && (previous.href === current.href)) {
-          previous.end = current.end
-          return false
-        }
-
-        // Also remove any empty links
-        return current.start !== current.end
-      })
-
-  // All done, return anything we found
-  return offsets
+  return mergeOffsets([ ...textRanges, ...linkRanges ])
 }
 
 /**

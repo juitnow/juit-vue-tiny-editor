@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { sanitize as sanitizeElement } from './sanitize'
+import { mergeOffsets, sanitize as sanitizeElement } from './sanitize'
 
 function sanitize(html: string): string {
   const element = document.createElement('div')
@@ -133,8 +133,8 @@ describe('HTML Sanitizer', () => {
         .toEqual('1 <a href="http://foo/">http://foo</a> 2')
 
     // A text link wrapped in an <a> tag should override the HREF
-    expect(sanitize('1<a href="http://foo">https://bar</a>2'))
-        .toEqual('1<a href="https://bar/">https://bar</a>2')
+    expect(sanitize('1 <a href="http://foo">https://bar</a> 2'))
+        .toEqual('1 <a href="https://bar/">https://bar</a> 2')
 
     // A text link wrapped in an <a> tag should be ignored
     expect(sanitize('http://foo http://bar'))
@@ -150,5 +150,52 @@ describe('HTML Sanitizer', () => {
   it('should sanitize mentions', () => {
     expect(sanitize('1<mention ref="2" foo="bar">3</mention>4'))
         .toEqual('1<mention contenteditable="false" ref="2">3</mention>4')
+  })
+
+  it('should merge offsets', () => {
+    expect(mergeOffsets([
+      { start: 1, end: 1, href: 'foo0' },
+      { start: 1, end: 2, href: 'foo1' },
+      { start: 1, end: 3, href: 'foo2' },
+      { start: 1, end: 4, href: 'foo3' },
+      { start: 2, end: 2, href: 'foo4' },
+      { start: 2, end: 3, href: 'foo5' },
+      { start: 2, end: 4, href: 'foo6' },
+      { start: 3, end: 3, href: 'foo7' },
+      { start: 3, end: 4, href: 'foo8' },
+      { start: 4, end: 4, href: 'foo9' },
+      { start: 1, end: 1, href: 'bar0' },
+      { start: 1, end: 2, href: 'bar1' },
+      { start: 1, end: 3, href: 'bar2' },
+      { start: 1, end: 4, href: 'bar3' },
+      { start: 2, end: 2, href: 'bar4' },
+      { start: 2, end: 3, href: 'bar5' },
+      { start: 2, end: 4, href: 'bar6' },
+      { start: 3, end: 3, href: 'bar7' },
+      { start: 3, end: 4, href: 'bar8' },
+      { start: 4, end: 4, href: 'bar9' },
+    ])).toEqual([
+      { start: 1, end: 4, href: 'foo3', index: 3 },
+    ])
+
+    expect(mergeOffsets([
+      { start: 1, end: 2, href: 'foo0' },
+      { start: 2, end: 3, href: 'foo1' },
+      { start: 3, end: 4, href: 'foo2' },
+      { start: 4, end: 4, href: 'foo3' },
+      { start: 2, end: 3, href: 'bar1' },
+    ])).toEqual([
+      { start: 1, end: 2, href: 'foo0', index: 0 },
+      { start: 2, end: 3, href: 'foo1', index: 1 },
+      { start: 3, end: 4, href: 'foo2', index: 2 },
+    ])
+
+    expect(mergeOffsets([
+      { start: 2, end: 4, href: 'foo0' },
+      { start: 1, end: 3, href: 'foo1' },
+      { start: 4, end: 2, href: 'foo0' },
+    ])).toEqual([
+      { start: 1, end: 3, href: 'foo1', index: 1 },
+    ])
   })
 })
