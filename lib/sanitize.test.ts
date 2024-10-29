@@ -152,6 +152,11 @@ describe('HTML Sanitizer', () => {
         .toEqual('1<mention contenteditable="false" ref="2">3</mention>4')
   })
 
+  it('should sanitize and preserve link offsets even on <div>, <p>, ...', () => {
+    expect(sanitize('<p>Hello <a href="http://foo">world</a>!</p>'))
+        .toEqual('\nHello <a href="http://foo/">world</a>!\n')
+  })
+
   it('should merge offsets', () => {
     expect(mergeOffsets([
       { start: 1, end: 1, href: 'foo0' },

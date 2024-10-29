@@ -96,7 +96,7 @@ function sanitizeStyles(
         if (previous?.tagName === 'b') previous.element.append(fragment)
         else child.append(maybeWrap(fragment, 'b', state.bold))
 
-        // Italic / emphasis
+      // Italic / emphasis
       } else if ((tagName === 'i') || (tagName === 'em')) {
         const fragment = sanitizeStyles(element, { ...state, italic: true })
         if (! fragment.hasChildNodes()) continue
@@ -104,13 +104,18 @@ function sanitizeStyles(
         if (previous?.tagName === 'i') previous.element.append(fragment)
         else child.append(maybeWrap(fragment, 'i', state.italic))
 
-        // Paragraphs, divs, line breaks
-      } else if ((tagName === 'br') || (tagName === 'div') || (tagName === 'p')) {
-        child.append('\n')
+      // Paragraphs, divs, line breaks
+      } else if (tagName === 'br') {
+        child.append(document.createElement('br'))
+      } else if ((tagName === 'div') || (tagName === 'p') || (tagName === 'pre') ||
+                 (tagName === 'h1') || (tagName === 'h2') || (tagName === 'h3') ||
+                 (tagName === 'h4') || (tagName === 'h5') || (tagName === 'h6') ||
+                 (tagName === 'ul') || (tagName === 'ol') || (tagName === 'li')) {
+        child.append(document.createElement('br'))
         const fragment = sanitizeStyles(element, state)
         if (fragment.hasChildNodes()) {
           child.append(fragment)
-          child.append('\n')
+          child.append(document.createElement('br'))
         }
 
       // Mention is a bit of a a special case (our custom element)
@@ -232,9 +237,14 @@ function sanitizeEmpty(parent: Element): void {
 
   const iterator = document.createNodeIterator(parent, NodeFilter.SHOW_ELEMENT)
   for (let node = iterator.nextNode(); node; node = iterator.nextNode()) {
+    if (node.nodeName.toLowerCase() === 'br') {
+      node.parentNode!.replaceChild(document.createTextNode('\n'), node)
+    }
     if (node.hasChildNodes()) continue
     node.parentNode?.removeChild(node)
   }
+
+  parent.normalize()
 }
 
 /**
