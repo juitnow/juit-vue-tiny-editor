@@ -4,20 +4,20 @@
     <div ref="popupRef" class="mentions-popup">
       <div ref="listRef" class="mentions-list">
         <div
-          v-for="(mention, i) in mentionable"
+          v-for="(mention, i) in mentionsList"
           :key="i"
           :class="{ 'mentions-selected': mentionsIndex === i }"
           class="mentions-entry"
-          @mousedown="insertMention(mention[0], mention[1])"
+          @mousedown="applyMention(mention.ref, mention.value)"
         >
-          <span class="mentions-text">{{ mention[1] }}</span>
-          <span class="mentions-ref">&nbsp;{{ mention[0] }}</span>
+          <span class="mentions-text">{{ mention.value }}</span>
+          <span class="mentions-ref">&nbsp;{{ mention.ref }}</span>
         </div>
       </div>
-      <div v-if="! mentionsAvailable" class="mentions-waiting">
+      <div v-if="! mentionsReady" class="mentions-waiting">
         {{ mentionsText }}{{ dotsString }}
       </div>
-      <div v-else-if="! mentionable.length" class="mentions-none">
+      <div v-else-if="! mentionsList.length" class="mentions-none">
         {{ mentionsText }}
       </div>
     </div>
@@ -70,13 +70,6 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits<{
-  isBold: [ boolean ],
-  isItalic: [ boolean ],
-  hasSelection: [ boolean ],
-  mention: [ string ],
-}>()
-
 /* ==== REFS ================================================================ */
 
 /** Reference to our content editable DIV */
@@ -86,35 +79,30 @@ const popupRef = ref<HTMLDivElement | null>(null)
 /** Reference to our mentions list (in the popup) DIV */
 const listRef = ref<HTMLDivElement | null>(null)
 
-/** Wrapper for our `editable` property */
-const editable = computed(() => props.editable)
+/** The `Range` of the current selection, if within our editor */
+const selected = shallowRef<Range & { backwards?: boolean } | null>(null)
 
 /** The HTML string contained by the editor */
 const html = ref('')
 
-/** The `Range` of the current selection, if within our editor */
-const selected = shallowRef<Range & { backwards?: boolean } | null>(null)
-
+/** Index of the current mention */
+const mentionsIndex = ref(0)
+/** Range of the current mention (while being inserted) */
 const mentionsRange = shallowRef<Range | null>(null)
+/** Text of the current mention (including the leading "@") */
 const mentionsText = computed(() => mentionsRange.value?.toString() || '')
-
-const mentionable = computed(() => {
+/** Computed to see if mentions (from our prop) are ready */
+const mentionsReady = computed(() => !! props.mentions)
+/** Computed list of mentions that match the current text */
+const mentionsList = computed(() => {
   const text = mentionsText.value.substring(1).toLowerCase()
 
   if (! props.mentions) return []
   return Object.entries(props.mentions)
       .filter(([ _, name ]) => name.toLowerCase().startsWith(text))
       .sort(([ _a, a ], [ _b, b ]) => a.localeCompare(b))
+      .map(([ ref, value ]) => ({ ref, value }))
 })
-
-const mentionsAvailable = computed(() => !! props.mentions)
-
-const dots = ref(0)
-
-let interval: ReturnType<typeof setInterval> | null = null
-
-const dotsString = computed(() => '.' + '.'.repeat(dots.value % 5))
-const mentionsIndex = ref(0)
 
 
 /** Whether the current selection is all bold */
@@ -124,6 +112,12 @@ const isItalic = ref(false)
 /** Whether the current selection is a link */
 const isLink = ref('')
 
+/** How many dots are we displaying (in "waiting for mentions" animation) */
+const dots = ref(0)
+/** String of dots to display (in "waiting for mentions" animation) */
+const dotsString = computed(() => '.' + '.'.repeat(dots.value % 5))
+/** Interval animating our "waiting for mentions" text */
+let dotsInterval: ReturnType<typeof setInterval> | null = null
 
 /* ==== FUNCTIONS =========================================================== */
 
@@ -134,7 +128,7 @@ function commit(): void {
   html.value = string.trimEnd() // remove trailing whitespace
 }
 
-
+/** Compute the mention range according to changes th the selection */
 function computeMention(): void {
   if (mentionsRange.value && selected.value?.collapsed) {
     const range = mentionsRange.value.cloneRange()
@@ -147,7 +141,8 @@ function computeMention(): void {
   mentionsRange.value = null
 }
 
-function insertMention(ref: string, value: string): void {
+/** Replace the current mentions range with a proper mention */
+function applyMention(ref: string, value: string): void {
   if (! editorRef.value) return
   if (! mentionsRange.value) return
 
@@ -209,15 +204,15 @@ function onKeydown(event: KeyboardEvent): void {
         event.preventDefault()
         break
       case 'ArrowDown':
-        mentionsIndex.value = Math.min(mentionsIndex.value + 1, mentionable.value.length - 1)
+        mentionsIndex.value = Math.min(mentionsIndex.value + 1, mentionsList.value.length - 1)
         event.preventDefault()
         break
       case 'PageDown':
-        mentionsIndex.value = Math.min(mentionsIndex.value + 4, mentionable.value.length - 1)
+        mentionsIndex.value = Math.min(mentionsIndex.value + 4, mentionsList.value.length - 1)
         event.preventDefault()
         break
       case 'End':
-        mentionsIndex.value = mentionable.value.length - 1
+        mentionsIndex.value = mentionsList.value.length - 1
         event.preventDefault()
         break
       case 'Escape':
@@ -225,8 +220,8 @@ function onKeydown(event: KeyboardEvent): void {
         event.preventDefault()
         break
       case 'Enter': {
-        const mention = mentionable.value[mentionsIndex.value]!
-        if (mention) insertMention(mention[0], mention[1])
+        const mention = mentionsList.value[mentionsIndex.value]
+        if (mention) applyMention(mention.ref, mention.value)
         event.preventDefault()
         break
       }
@@ -234,6 +229,7 @@ function onKeydown(event: KeyboardEvent): void {
   }
 }
 
+/** Replace the current selection with the (sanitized) content from clipboard */
 function onPaste(event: ClipboardEvent): void {
   event.preventDefault()
   if (! editorRef.value) return
@@ -247,6 +243,7 @@ function onPaste(event: ClipboardEvent): void {
   commit()
 }
 
+/** Someone typed something in our editor, let's process it */
 function onInput(event: InputEvent): void {
   if (! editorRef.value) return
 
@@ -305,14 +302,14 @@ onMounted(() => {
   }, { immediate: true })
 
   /* Watch our mentions availability and trigger a waiting animation */
-  watch(mentionsAvailable, (available) => {
+  watch(mentionsReady, (available) => {
     dots.value = 0
-    if (! available) interval = setInterval(() => dots.value = dots.value + 1, 200)
-    else if (interval) clearInterval(interval)
+    if (! available) dotsInterval = setInterval(() => dots.value = dots.value + 1, 200)
+    else if (dotsInterval) clearInterval(dotsInterval)
   }, { immediate: true })
 
   /* Watch our mentions index and update the popup */
-  watch([ mentionsIndex, mentionsRange, mentionable ], ([ index, range, mentionable ], [ oldIndex = -1 ]) => {
+  watch([ mentionsIndex, mentionsRange, mentionsList ], ([ index, range, mentionable ], [ oldIndex = -1 ]) => {
     // Make sure that our index is within acceptable bounds
     if (index >= mentionable.length) index = Math.max(mentionable.length - 1, 0)
     mentionsIndex.value = index
@@ -396,7 +393,6 @@ onMounted(() => {
 
   /* Watch the selected range and infer state for bold, italic, ... */
   watch(selected, (selected) => {
-    emit('hasSelection', !! selected)
     if (selected) {
       isBold.value = !! isTagged(editor, selected, 'b')
       isItalic.value = !! isTagged(editor, selected, 'i')
@@ -407,20 +403,28 @@ onMounted(() => {
       isLink.value = ''
     }
   }, { immediate: true })
-
-  /* Watch our local refs emit */
-  watch(isBold, (bold) => emit('isBold', bold), { immediate: true })
-  watch(isItalic, (italic) => emit('isItalic', italic), { immediate: true })
-  watch(isItalic, (italic) => emit('isItalic', italic), { immediate: true })
-  watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: true })
 })
 
 onUnmounted(() => {
   document.removeEventListener('selectionchange', onSelectionChange)
-  if (interval) clearInterval(interval)
+  if (dotsInterval) clearInterval(dotsInterval)
 })
 
-/* ===== EXPOSED METHODS ==================================================== */
+/* ===== EMITS AND EXPOSED METHODS ========================================== */
+
+const emit = defineEmits<{
+  isBold: [ boolean ],
+  isItalic: [ boolean ],
+  hasSelection: [ boolean ],
+  mention: [ string ],
+}>()
+
+/* Watch our local refs and emit */
+watch(selected, (selected) => emit('hasSelection', !! selected), { immediate: true })
+watch(isBold, (bold) => emit('isBold', bold), { immediate: true })
+watch(isItalic, (italic) => emit('isItalic', italic), { immediate: true })
+watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: true })
+
 
 defineExpose({
   /** Toggle _bold_ for the current selected text */
