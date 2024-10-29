@@ -40,7 +40,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } fr
 import { getCharacters, getOffsetsRange, getRangeOffsets } from './range'
 import { replaceRange } from './replace'
 import { sanitize } from './sanitize'
-import { getSelectionRange, restoreSelection } from './selection'
+import { getSelectionOffsets, getSelectionRange, restoreSelection } from './selection'
 import { isTagged, toggleTag } from './tags'
 
 import type { PropType } from 'vue'
@@ -106,11 +106,11 @@ const mentionsList = computed(() => {
 
 
 /** Whether the current selection is all bold */
-const isBold = ref(false)
+const isBold = ref<Element | null>(null)
 /** Whether the current selection is all italic */
-const isItalic = ref(false)
+const isItalic = ref<Element | null>(null)
 /** Whether the current selection is a link */
-const isLink = ref('')
+const isLink = ref<Element | null>(null)
 
 /** How many dots are we displaying (in "waiting for mentions" animation) */
 const dots = ref(0)
@@ -123,7 +123,16 @@ let dotsInterval: ReturnType<typeof setInterval> | null = null
 
 /** Commit changes to the model converting our editor into HTML */
 function commit(): void {
-  let string = editorRef.value?.innerHTML || ''
+  if (! editorRef.value) return void (html.value = '')
+
+  // Clone our editor, so we can clean up unwanted attributes
+  const clone = editorRef.value.cloneNode(true) as Element
+  const mentions = clone.querySelectorAll('mention')
+  for (const mention of mentions) mention.removeAttribute('contenteditable')
+
+  // Sanitize and clean our HTML, then update the model
+  let string = clone.innerHTML
+  string = string.replaceAll('&nbsp;', ' ')
   if (string === '<br>') string = '' // all content was deleted
   html.value = string.trimEnd() // remove trailing whitespace
 }
@@ -154,8 +163,8 @@ function applyMention(ref: string, value: string): void {
   element.append(value)
   fragment.append(element, ' ')
 
-  const offsets = replaceRange(editor, mentionsRange.value, fragment)
-  restoreSelection(editor, offsets)
+  const offsets = replaceRange(editor, mentionsRange.value, element)
+  selected.value = restoreSelection(editor, offsets)
   document.getSelection()?.collapseToEnd()
   mentionsRange.value = null
   commit()
@@ -170,7 +179,7 @@ function applyTag(tagName: string, attributes: Record<string, string> = {}): voi
 
   const offsets = getRangeOffsets(editor, selected.value)
   toggleTag(editor, selected.value, tagName, attributes)
-  if (offsets) restoreSelection(editor, offsets)
+  if (offsets) selected.value = restoreSelection(editor, offsets)
   commit()
 }
 
@@ -238,25 +247,41 @@ function onPaste(event: ClipboardEvent): void {
   const text = event.clipboardData?.getData('text/html') || ''
   const offsets = replaceRange(editorRef.value, selected.value, text)
 
-  if (offsets) restoreSelection(editorRef.value, offsets)
+  if (offsets) selected.value = restoreSelection(editorRef.value, offsets)
   document.getSelection()?.collapseToEnd()
   commit()
 }
 
+
 /** Someone typed something in our editor, let's process it */
 function onInput(event: InputEvent): void {
-  if (! editorRef.value) return
+  const editor = editorRef.value
+  if (! editor) return
+
+  // First thing first: sanitize the content (this will also take care of links)
+  const mentions = mentionsRange.value ? getRangeOffsets(editor, mentionsRange.value) : null
+  const selection = getSelectionOffsets(editor)
+  sanitize(editor)
+  if (mentions) mentionsRange.value = getOffsetsRange(editor, mentions)
+  if (selection) {
+    // Edge case when all content is deleted: insert a single "<br>"
+    if (editor.innerHTML === '<br>') {
+      document.getSelection()?.setBaseAndExtent(editor, 0, editor, 0)
+    } else {
+      selected.value = restoreSelection(editor, selection)
+    }
+  }
 
   // When the input is "@" we might want to trigger a mention
   if ((! isLink.value) && (! mentionsRange.value) && (event.data === '@') && (event.inputType === 'insertText')) {
     const selection = document.getSelection()
     if (! selection?.anchorNode) return
-    const text = getCharacters(editorRef.value, selection.anchorNode, selection.anchorOffset)
+    const text = getCharacters(editor, selection.anchorNode, selection.anchorOffset)
     if (text.match(/(\s|^)@$/)) {
       const start = text.length === 1 ? 0 : text.length - 1
       const end = text.length
       const offsets: Offsets = { start, end }
-      mentionsRange.value = getOffsetsRange(editorRef.value, offsets)
+      mentionsRange.value = getOffsetsRange(editor, offsets)
     }
   } else {
     computeMention()
@@ -394,13 +419,13 @@ onMounted(() => {
   /* Watch the selected range and infer state for bold, italic, ... */
   watch(selected, (selected) => {
     if (selected) {
-      isBold.value = !! isTagged(editor, selected, 'b')
-      isItalic.value = !! isTagged(editor, selected, 'i')
-      isLink.value = isTagged(editor, selected, 'a')?.getAttribute('href') || ''
+      isLink.value = isTagged(editor, selected, 'a')
+      isBold.value = isTagged(editor, selected, 'b')
+      isItalic.value = isTagged(editor, selected, 'i')
     } else {
-      isBold.value = false
-      isItalic.value = false
-      isLink.value = ''
+      isLink.value = null
+      isBold.value = null
+      isItalic.value = null
     }
   }, { immediate: true })
 })
@@ -413,6 +438,7 @@ onUnmounted(() => {
 /* ===== EMITS AND EXPOSED METHODS ========================================== */
 
 const emit = defineEmits<{
+  isLink: [ string ],
   isBold: [ boolean ],
   isItalic: [ boolean ],
   hasSelection: [ boolean ],
@@ -421,8 +447,9 @@ const emit = defineEmits<{
 
 /* Watch our local refs and emit */
 watch(selected, (selected) => emit('hasSelection', !! selected), { immediate: true })
-watch(isBold, (bold) => emit('isBold', bold), { immediate: true })
-watch(isItalic, (italic) => emit('isItalic', italic), { immediate: true })
+watch(isLink, (link) => emit('isLink', link?.getAttribute('href') || ''), { immediate: true })
+watch(isBold, (bold) => emit('isBold', !! bold), { immediate: true })
+watch(isItalic, (italic) => emit('isItalic', !! italic), { immediate: true })
 watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: true })
 
 
@@ -510,7 +537,7 @@ defineExpose({
   width: 100%;
   background-color: #eee;
   box-sizing: border-box;
-  white-space-collapse: preserve;
+  /* white-space-collapse: preserve; */
   padding: 0.25em;
 
   &::v-deep mention {
