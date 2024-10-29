@@ -55,7 +55,7 @@ describe('Tags', () => {
 
     toggleTag(document.body, range, 'a', { href: 'https://example.com', name: 'example' })
 
-    expect(document.body.innerHTML).toBe('before<b><a href="https://example.com">content</a></b>after')
+    expect(document.body.innerHTML).toBe('before<b><a href="https://example.com/">content</a></b>after')
   })
 
   it('should remove a tag', () => {

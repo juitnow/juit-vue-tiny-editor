@@ -63,22 +63,25 @@ describe('HTML Sanitizer', () => {
   })
 
   it('should sanitize links', () => {
-    expect(sanitize('1<a href="foo" name="bar">2</a>3')).toEqual('1<a href="foo">2</a>3')
-    expect(sanitize('1<a href="foo">2</a><a href="bar">3</a>4')).toEqual('1<a href="foo">2</a><a href="bar">3</a>4')
-    expect(sanitize('1<a href="foo">2</a>3<a href="foo">4</a>5')).toEqual('1<a href="foo">2</a>3<a href="foo">4</a>5')
+    expect(sanitize('1<a href="http://foo" name="bar">2</a>3'))
+        .toEqual('1<a href="http://foo/">2</a>3')
+    expect(sanitize('1<a href="http://foo">2</a><a href="http://bar">3</a>4'))
+        .toEqual('1<a href="http://foo/">2</a><a href="http://bar/">3</a>4')
+    expect(sanitize('1<a href="http://foo">2</a>3<a href="http://foo">4</a>5'))
+        .toEqual('1<a href="http://foo/">2</a>3<a href="http://foo/">4</a>5')
   })
 
   it('should preserve formatting across links', () => {
-    expect(sanitize('1<b>2</b><a href="foo"><b>3</b>4</a>5'))
-        .toEqual('1<b>2</b><a href="foo"><b>3</b>4</a>5')
+    expect(sanitize('1<b>2</b><a href="http://foo"><b>3</b>4</a>5'))
+        .toEqual('1<b>2</b><a href="http://foo/"><b>3</b>4</a>5')
     // this shoud basically rewrite links as "top level" elements
-    expect(sanitize('1<a href="foo">2</a><b><a href="foo">3</a>4</b>5'))
-        .toEqual('1<a href="foo">2<b>3</b></a><b>4</b>5')
+    expect(sanitize('1<a href="http://foo">2</a><b><a href="http://foo">3</a>4</b>5'))
+        .toEqual('1<a href="http://foo/">2<b>3</b></a><b>4</b>5')
   })
 
   it('should strip empty links', () => {
-    expect(sanitize('1<a href="foo"></a>2')).toEqual('12')
-    expect(sanitize('1<a href="foo"><b></b></a>2')).toEqual('12')
+    expect(sanitize('1<a href="http://foo"></a>2')).toEqual('12')
+    expect(sanitize('1<a href="http://foo"><b></b></a>2')).toEqual('12')
     expect(sanitize('1<a name="foo"></a>2')).toEqual('12')
     expect(sanitize('1<a name="foo"><b></b></a>2')).toEqual('12')
   })
@@ -90,18 +93,18 @@ describe('HTML Sanitizer', () => {
   })
 
   it('should join contiguous links', () => {
-    expect(sanitize('1<a href="foo">2</a><a href="foo">3</a>4')).toEqual('1<a href="foo">23</a>4')
+    expect(sanitize('1<a href="http://foo">2</a><a href="http://foo">3</a>4')).toEqual('1<a href="http://foo/">23</a>4')
   })
 
   it('should wipe nested links', () => {
     // this is an edge case, as the parser won't normally allow this
     const inner = document.createElement('a')
-    inner.setAttribute('href', 'inner')
+    inner.setAttribute('href', 'http://inner')
     inner.setAttribute('name', 'remove-this')
     inner.append('nested')
 
     const outer = document.createElement('a')
-    outer.setAttribute('href', 'outer')
+    outer.setAttribute('href', 'http://outer')
     inner.setAttribute('name', 'remove-this')
     outer.append('before')
     outer.append(inner)
@@ -114,7 +117,24 @@ describe('HTML Sanitizer', () => {
 
     sanitizeElement(element)
 
-    expect(element.innerHTML).toEqual('prefix<a href="outer">beforenestedafter</a>suffix')
+    expect(element.innerHTML).toEqual('prefix<a href="http://outer/">beforenestedafter</a>suffix')
+  })
+
+  it('should add links from text', () => {
+    // This is an invalid URL
+    expect(sanitize('1 https://: 2')).toEqual('1 https://: 2')
+
+    // This will be normalized with an extra "/" at the end
+    expect(sanitize('1 http://example.com 2'))
+        .toEqual('1 <a href="http://example.com/">http://example.com</a> 2')
+
+    // A text link wrapped in an <a> tag should be ignored
+    expect(sanitize('1<a href="http://example.com">https://www.juit.com/</a>2'))
+        .toEqual('1<a href="http://example.com/">https://www.juit.com/</a>2')
+    // const node = document.createTextNode('1 http://example.com 2')
+
+    // expect(sanitize('1http://example.com 2http://example.com 3'))
+    //     .toEqual('1<a href="http://example.com">http://example.com</a> 2<a href="http://example.com">http://example.com</a> 3')
   })
 
   it('should strp empty or invalid mentions', () => {

@@ -26,12 +26,12 @@ describe('Replace', () => {
       <script>1</script>
       <b>2</b><b>3</b>
       <a name="foo">4</a>
-      <a href="bar">5</a>
+      <a href="http://bar">5</a>
     `
 
     const result = replaceRange(editor, range, html)
 
-    expect(editor.innerHTML).toBe('bef<b>23</b>4<a href="bar">5</a>er')
+    expect(editor.innerHTML).toBe('bef<b>23</b>4<a href="http://bar/">5</a>er')
     expect(result).toEqual({ start: 3, end: 7, backwards: true })
   })
 
