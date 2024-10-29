@@ -4,12 +4,10 @@ import { sanitize } from './sanitize'
 import type { Offsets } from './range'
 
 export function replaceRange(
-    parent: Element | DocumentFragment,
+    parent: Element,
     range: Range,
     html: DocumentFragment | string,
 ): Offsets {
-  // let html: DocumentFragment
-
   if (typeof html === 'string') {
     if (! containsRange(parent, range)) throw new Error('Range out of bounds')
 
@@ -26,8 +24,6 @@ export function replaceRange(
 
     // Wipe empty text nodes
     html.normalize()
-  // } else {
-  //   html = html
   }
 
   // Save our selection offsets

@@ -82,11 +82,13 @@ describe('HTML Sanitizer', () => {
   it('should strip empty links', () => {
     expect(sanitize('1<a href="http://foo"></a>2')).toEqual('12')
     expect(sanitize('1<a href="http://foo"><b></b></a>2')).toEqual('12')
-    expect(sanitize('1<a name="foo"></a>2')).toEqual('12')
-    expect(sanitize('1<a name="foo"><b></b></a>2')).toEqual('12')
   })
 
-  it('should preserve only content with links without hrefs', () => {
+  it('should strip links with invalid or missing hrefs', () => {
+    expect(sanitize('1<a href="foo">2</a>3')).toEqual('123')
+    expect(sanitize('1<a href="foo"><b>2</b></a>3')).toEqual('1<b>2</b>3')
+    expect(sanitize('1<a name="foo">2</a>3')).toEqual('123')
+    expect(sanitize('1<a name="foo"><b>2</b></a>3')).toEqual('1<b>2</b>3')
     expect(sanitize('1<a>2</a>3')).toEqual('123')
     expect(sanitize('1<a>2<b></b>3</a>4')).toEqual('1234')
     expect(sanitize('1<a>2<b>3</b>4</a>5')).toEqual('12<b>3</b>45')
@@ -131,10 +133,10 @@ describe('HTML Sanitizer', () => {
     // A text link wrapped in an <a> tag should be ignored
     expect(sanitize('1<a href="http://example.com">https://www.juit.com/</a>2'))
         .toEqual('1<a href="http://example.com/">https://www.juit.com/</a>2')
-    // const node = document.createTextNode('1 http://example.com 2')
 
-    // expect(sanitize('1http://example.com 2http://example.com 3'))
-    //     .toEqual('1<a href="http://example.com">http://example.com</a> 2<a href="http://example.com">http://example.com</a> 3')
+    // A text link wrapped in an <a> tag should be ignored
+    expect(sanitize('http://foo http://bar'))
+        .toEqual('<a href="http://foo/">http://foo</a> <a href="http://bar/">http://bar</a>')
   })
 
   it('should strp empty or invalid mentions', () => {

@@ -49,7 +49,7 @@ function maybeWrap(
  * @returns The sanitized fragment
  */
 function sanitizeStyles(
-    parent: Node,
+    parent: Element,
     state: {
       bold?: boolean,
       italic?: boolean,
@@ -132,7 +132,7 @@ function sanitizeStyles(
  * @param parent The {@link Node} for which links will be sanitized
  * @returns An array of offsets and related hrefs of all links
  */
-function sanitizeLinks(parent: Node): (Offsets & { href: string })[] {
+function sanitizeLinks(parent: Element): (Offsets & { href: string })[] {
   // An iterator over all TEXT nodes to match links in content nodes
   const textIterator = document.createNodeIterator(parent, NodeFilter.SHOW_TEXT, (node) => {
     return node.parentElement?.getAttribute('data-auto-link') ?
@@ -166,7 +166,7 @@ function sanitizeLinks(parent: Node): (Offsets & { href: string })[] {
     const fragment = document.createDocumentFragment()
     fragment.append(prefix, element, suffix)
 
-    node.parentElement!.replaceChild(fragment, node)
+    node.parentElement?.replaceChild(fragment, node)
   }
 
   // An iterator over all the <a> elements
@@ -226,9 +226,9 @@ function sanitizeLinks(parent: Node): (Offsets & { href: string })[] {
 /**
  * Strip all empty elements out from the children of a specified {@link Node}.
  *
- * @param parent The {@link Node} to sanitize
+ * @param parent The {@link Element} to sanitize
  */
-function sanitizeEmpty(parent: Node): void {
+function sanitizeEmpty(parent: Element): void {
   parent.normalize()
 
   const iterator = document.createNodeIterator(parent, NodeFilter.SHOW_ELEMENT)
@@ -245,30 +245,7 @@ function sanitizeEmpty(parent: Node): void {
  * @param parent The {@link Element} to sanitize
  * @returns The same `parent` specified as an argument
  */
-export function sanitize(parent: Element): Element
-
-/**
- * Sanitize the contents of a {@link DocumentFragment}  normalizing styles
- * (bold, italic, ...) and links.
- *
- * @param parent The {@link DocumentFragment} to sanitize
- * @returns The same `parent` specified as an argument
- */
-export function sanitize(parent: DocumentFragment): DocumentFragment
-
-/**
- * Sanitize the contents of an {@link Element} or {@link DocumentFragment}
- * normalizing styles (bold, italic, ...) and links.
- *
- * @param parent The {@link Element} or {@link DocumentFragment} to sanitize
- * @returns The same `parent` specified as an argument
- */
-export function sanitize(parent: Element | DocumentFragment): Element | DocumentFragment
-
-// Overload implementation
-export function sanitize(
-    parent: Element | DocumentFragment,
-): Element | DocumentFragment {
+export function sanitize(parent: Element): Element {
   // Cleanup before we start
   parent.normalize()
 
