@@ -22,17 +22,12 @@ describe('Replace', () => {
     range.setEnd(after, 3)
     range.backwards = true
 
-    const html = `
-      <script>1</script>
-      <b>2</b><b>3</b>
-      <a name="foo">4</a>
-      <a href="http://bar">5</a>
-    `
+    const html = '<script>1</script><b>2</b><b>3</b>&nbsp;<a name="foo">4</a><a href="http://bar">5</a>'
 
     const result = replaceRange(editor, range, html)
 
-    expect(editor.innerHTML).toBe('bef<b>23</b>4<a href="http://bar/">5</a>er')
-    expect(result).toEqual({ start: 3, end: 7, backwards: true })
+    expect(editor.innerHTML).toBe('bef<b>23</b>&nbsp;4<a href="http://bar/">5</a>er')
+    expect(result).toEqual({ start: 3, end: 8, backwards: true })
   })
 
   it('should insert and wipe some content', () => {

@@ -6,24 +6,14 @@ import type { Offsets } from './range'
 export function replaceRange(
     parent: Element,
     range: Range,
-    html: DocumentFragment | string,
+    html: Element | string,
 ): Offsets {
   if (typeof html === 'string') {
     if (! containsRange(parent, range)) throw new Error('Range out of bounds')
 
-    // Parse our HTML
     const body = new DOMParser().parseFromString(html, 'text/html').body
-    html = document.createDocumentFragment()
+    html = document.createElement('span')
     html.append(...body.childNodes)
-
-    // Trim any empty text nodes to an empty string
-    const iterator = document.createNodeIterator(html, NodeFilter.SHOW_TEXT)
-    for (let node = iterator.nextNode(); node; node = iterator.nextNode()) {
-      if (! node.nodeValue?.trim()) node.nodeValue = ''
-    }
-
-    // Wipe empty text nodes
-    html.normalize()
   }
 
   // Save our selection offsets
