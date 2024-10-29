@@ -16,6 +16,17 @@ const STRIP_TAGS = new Set([
   'textarea',
 ])
 
+/** Parse an URL and return the normalized HREF if it's a valid HTTP url */
+function parseURL(string?: string | null): string | null {
+  if (! string) return null
+  if (! string.match(/^https?:\/\/[^\s]+$/)) return null
+  try {
+    return new URL(string).href
+  } catch {
+    return null
+  }
+}
+
 /**
  * Wrap a document fragment in a tag unless `noWrap` is `true`
  *
@@ -171,15 +182,10 @@ function sanitizeLinks(parent: Element): (Offsets & { href: string })[] {
   for (let node = iterator.nextNode(); node; node = iterator.nextNode()) {
     const element = node as Element
 
-    let href = element.getAttribute('href')
-    if (! href) href = element.textContent
-    if (! href) continue
-    try {
-      const url = new URL(href)
-      ranges.add(Object.assign(rangeFromContents(element), { href: url.href }))
-    } catch {
-      // ignore URL parsing errors
-    }
+    let href = parseURL(element.textContent)
+    if (! href) href = parseURL(element.getAttribute('href'))
+
+    if (href) ranges.add(Object.assign(rangeFromContents(element), { href }))
   }
 
   // Filter out any ranges that is contained within another range

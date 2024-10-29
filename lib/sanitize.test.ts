@@ -129,12 +129,12 @@ describe('HTML Sanitizer', () => {
     expect(sanitize('1 https://: 2')).toEqual('1 https://: 2')
 
     // This will be normalized with an extra "/" at the end
-    expect(sanitize('1 http://example.com 2'))
-        .toEqual('1 <a href="http://example.com/">http://example.com</a> 2')
+    expect(sanitize('1 http://foo 2'))
+        .toEqual('1 <a href="http://foo/">http://foo</a> 2')
 
-    // A text link wrapped in an <a> tag should be ignored
-    expect(sanitize('1<a href="http://example.com">https://www.juit.com/</a>2'))
-        .toEqual('1<a href="http://example.com/">https://www.juit.com/</a>2')
+    // A text link wrapped in an <a> tag should override the HREF
+    expect(sanitize('1<a href="http://foo">https://bar</a>2'))
+        .toEqual('1<a href="https://bar/">https://bar</a>2')
 
     // A text link wrapped in an <a> tag should be ignored
     expect(sanitize('http://foo http://bar'))
