@@ -135,8 +135,7 @@ function sanitizeStyles(
 function sanitizeLinks(parent: Element): (Offsets & { href: string })[] {
   // An iterator over all TEXT nodes to match links in content nodes
   const textIterator = document.createNodeIterator(parent, NodeFilter.SHOW_TEXT, (node) => {
-    return node.parentElement?.getAttribute('data-auto-link') ?
-      NodeFilter.FILTER_SKIP : NodeFilter.FILTER_ACCEPT
+    return node.parentElement?.nodeName.toLowerCase() === 'a' ? NodeFilter.FILTER_SKIP : NodeFilter.FILTER_ACCEPT
   })
 
   for (let node = textIterator.nextNode(); node; node = textIterator.nextNode()) {
@@ -146,21 +145,12 @@ function sanitizeLinks(parent: Element): (Offsets & { href: string })[] {
     if (! match) continue
 
     const link = match[2]!
-    let url: URL
-    try {
-      url = new URL(link)
-    } catch {
-      // ignore URL parsing errors
-      continue
-    }
 
     const index = text.indexOf(link)
     const prefix = text.slice(0, index)
     const suffix = text.slice(index + link.length)
 
     const element = document.createElement('a')
-    element.setAttribute('data-auto-link', 'true')
-    element.setAttribute('href', url.href)
     element.append(link)
 
     const fragment = document.createDocumentFragment()
@@ -179,11 +169,14 @@ function sanitizeLinks(parent: Element): (Offsets & { href: string })[] {
   // Ranges for all our <a> elements
   const ranges = new Set<Range & { href: string }>()
   for (let node = iterator.nextNode(); node; node = iterator.nextNode()) {
-    const href = (node as Element).getAttribute('href')
+    const element = node as Element
+
+    let href = element.getAttribute('href')
+    if (! href) href = element.textContent
     if (! href) continue
     try {
       const url = new URL(href)
-      ranges.add(Object.assign(rangeFromContents(node), { href: url.href }))
+      ranges.add(Object.assign(rangeFromContents(element), { href: url.href }))
     } catch {
       // ignore URL parsing errors
     }

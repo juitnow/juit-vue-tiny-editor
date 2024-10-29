@@ -80,6 +80,8 @@ describe('HTML Sanitizer', () => {
   })
 
   it('should strip empty links', () => {
+    expect(sanitize('1<a></a>2')).toEqual('12')
+    expect(sanitize('1<a><b></b></a>2')).toEqual('12')
     expect(sanitize('1<a href="http://foo"></a>2')).toEqual('12')
     expect(sanitize('1<a href="http://foo"><b></b></a>2')).toEqual('12')
   })
