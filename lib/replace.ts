@@ -6,13 +6,13 @@ import type { Offsets } from './range'
 export function replaceRange(
     parent: Element,
     range: Range,
-    html: Element | string,
+    html: DocumentFragment | string,
 ): Offsets {
   if (typeof html === 'string') {
     if (! containsRange(parent, range)) throw new Error('Range out of bounds')
 
     const body = new DOMParser().parseFromString(html, 'text/html').body
-    html = document.createElement('span')
+    html = document.createDocumentFragment()
     html.append(...body.childNodes)
   }
 

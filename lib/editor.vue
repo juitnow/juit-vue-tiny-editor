@@ -163,7 +163,7 @@ function applyMention(ref: string, value: string): void {
   element.append(value)
   fragment.append(element, ' ')
 
-  const offsets = replaceRange(editor, mentionsRange.value, element)
+  const offsets = replaceRange(editor, mentionsRange.value, fragment)
   selected.value = restoreSelection(editor, offsets)
   document.getSelection()?.collapseToEnd()
   mentionsRange.value = null
