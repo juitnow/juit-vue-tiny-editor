@@ -1,23 +1,23 @@
 <template>
-  <div class="editxx">
+  <div class="juit-tiny-edit">
     <!-- our mentions popup -->
-    <div ref="popupRef" class="mentions-popup">
-      <div ref="listRef" class="mentions-list">
+    <div ref="popupRef" class="-jte-mentions-popup">
+      <div ref="listRef" class="-jte-mentions-list">
         <div
           v-for="(mention, i) in mentionsList"
           :key="i"
-          :class="{ 'mentions-selected': mentionsIndex === i }"
-          class="mentions-entry"
+          :class="{ '-jte-mentions-selected': mentionsIndex === i }"
+          class="-jte-mentions-entry"
           @mousedown="applyMention(mention.ref, mention.value)"
         >
-          <span class="mentions-text">{{ mention.value }}</span>
-          <span class="mentions-ref">&nbsp;{{ mention.ref }}</span>
+          <span class="-jte-mentions-text">{{ mention.value }}</span>
+          <span class="-jte-mentions-ref">&nbsp;{{ mention.ref }}</span>
         </div>
       </div>
-      <div v-if="! mentionsReady" class="mentions-waiting">
+      <div v-if="! mentionsReady" class="-jte-mentions-waiting">
         {{ mentionsText }}{{ dotsString }}
       </div>
-      <div v-else-if="! mentionsList.length" class="mentions-none">
+      <div v-else-if="! mentionsList.length" class="-jte-mentions-none">
         {{ mentionsText }}
       </div>
     </div>
@@ -25,7 +25,7 @@
     <!-- our editor -->
     <div
       ref="editorRef"
-      class="editor"
+      class="-jte-editor"
       :contenteditable="editable ? 'plaintext-only' : 'false'"
       @input="onInput($event as InputEvent)"
       @keydown="onKeydown($event)"
@@ -462,101 +462,101 @@ defineExpose({
 })
 </script>
 
-<style lang="pcss" scoped>
-.editxx {
+<style lang="pcss">
+.juit-tiny-edit {
   display: flex;
   align-items: stretch;
-}
 
-/** Our mentions popul */
-.mentions-popup {
-  position: absolute;
-  background-color: #fff;
-  border: 1px solid #ccc;
-  border-radius: 0.25em;
-  overflow: hidden;
-  display: none;
-  cursor: pointer;
-  min-width: 8em;
-  z-index: 1000;
+  .-jte-editor {
+    width: 100%;
+    background-color: #eee;
+    box-sizing: border-box;
+    /* white-space-collapse: preserve; */
+    padding: 0.25em;
 
-  /** List of all our available mentions */
-  .mentions-list {
-    overflow: scroll;
-    max-height: 7em;
-    scroll-top: 10px;
-    white-space: nowrap;
-  }
-
-  /** Style for any matching mention entry */
-  .mentions-entry {
-    margin: 5px 0;
-    padding: 0 0.75em;
-    color: #666;
-
-    /** Smaller refs */
-    .mentions-ref {
-      font-size: 0.75em;
-      font-style: italic;
-    }
-
-    /** Extra stuff for selected mention */
-    &.mentions-selected {
-      color: #000;
-      padding: 0 0.75em 0 0;
+    mention {
       background-color: #ccc;
+      border-radius: 0.25em;
+      padding: 0em 0.4em 0.05em 0;
+      margin: 0 0.2em;
+      cursor: default;
+      user-select: none;
+      font-weight: normal;
+      font-style: normal;
+      text-decoration: none;
 
-      /** Tag to highlight the current selected entry */
       &::before {
         content: '';
         background-color: #090;
-        padding: 0em 0.25em 0.05em 0.25em;
+        color: #fff;
+        padding: 0em 0.2em 0.05em 0.25em;
         margin-right: 0.25em;
+        border-radius: 0.25em 0 0 0.25em;
       }
     }
   }
 
-  .mentions-waiting {
-    margin: 5px 0;
-    padding: 0 0.75em;
-    font-style: italic;
-    color: #666;
-  }
-
-  /** Style for when no mention matches our input */
-  .mentions-none {
-    margin: 5px 0;
-    padding: 0 0.75em;
-    font-style: italic;
-    color: #ccc;
-  }
-}
-
-.editor {
-  width: 100%;
-  background-color: #eee;
-  box-sizing: border-box;
-  /* white-space-collapse: preserve; */
-  padding: 0.25em;
-
-  &::v-deep mention {
-    background-color: #ccc;
+  /** Our mentions popul */
+  .-jte-mentions-popup {
+    position: absolute;
+    background-color: #fff;
+    border: 1px solid #ccc;
     border-radius: 0.25em;
-    padding: 0em 0.4em 0.05em 0;
-    margin: 0 0.2em;
-    cursor: default;
-    user-select: none;
-    font-weight: normal;
-    font-style: normal;
-    text-decoration: none;
+    overflow: hidden;
+    display: none;
+    cursor: pointer;
+    min-width: 8em;
+    z-index: 1000;
 
-    &::before {
-      content: '';
-      background-color: #090;
-      color: #fff;
-      padding: 0em 0.2em 0.05em 0.25em;
-      margin-right: 0.25em;
-      border-radius: 0.25em 0 0 0.25em;
+    /** List of all our available mentions */
+    .-jte-mentions-list {
+      overflow: scroll;
+      max-height: 7em;
+      scroll-top: 10px;
+      white-space: nowrap;
+    }
+
+    /** Style for any matching mention entry */
+    .-jte-mentions-entry {
+      margin: 5px 0;
+      padding: 0 0.75em;
+      color: #666;
+
+      /** Smaller refs */
+      .-jte-mentions-ref {
+        font-size: 0.75em;
+        font-style: italic;
+      }
+
+      /** Extra stuff for selected mention */
+      &.-jte-mentions-selected {
+        color: #000;
+        padding: 0 0.75em 0 0;
+        background-color: #ccc;
+
+        /** Tag to highlight the current selected entry */
+        &::before {
+          content: '';
+          background-color: #090;
+          padding: 0em 0.25em 0.05em 0.25em;
+          margin-right: 0.25em;
+        }
+      }
+    }
+
+    .-jte-mentions-waiting {
+      margin: 5px 0;
+      padding: 0 0.75em;
+      font-style: italic;
+      color: #666;
+    }
+
+    /** Style for when no mention matches our input */
+    .-jte-mentions-none {
+      margin: 5px 0;
+      padding: 0 0.75em;
+      font-style: italic;
+      color: #ccc;
     }
   }
 }

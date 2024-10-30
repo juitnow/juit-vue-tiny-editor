@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { Editor } from './index'
+import { Editor } from '../lib/index'
 
 describe('Editor', () => {
   it('should expose a Vue component', () => {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { isTagged, toggleTag } from './tags'
+import { isTagged, toggleTag } from '../lib/tags'
 
 describe('Tags', () => {
   let before: Text

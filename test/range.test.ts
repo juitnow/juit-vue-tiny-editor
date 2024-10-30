@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { containsRange, getOffsetsRange, getRangeOffsets, rangeFromContents, rangeFromNode } from './range'
+import { containsRange, getOffsetsRange, getRangeOffsets, rangeFromContents, rangeFromNode } from '../lib/range'
 
 describe('Range', () => {
   let before: Text

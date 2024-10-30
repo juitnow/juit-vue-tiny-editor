@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { mergeOffsets, sanitize as sanitizeElement } from './sanitize'
+import { mergeOffsets, sanitize as sanitizeElement } from '../lib/sanitize'
 
 function sanitize(html: string): string {
   const element = document.createElement('div')

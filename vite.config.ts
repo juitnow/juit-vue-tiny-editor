@@ -6,10 +6,12 @@ export default defineConfig((env) => {
   const demo = env.mode === 'demo'
   return defineConfig({
     build: {
-      minify: true,
+      minify: false,
       sourcemap: true,
       outDir: demo ? 'demo' : 'dist',
+      copyPublicDir: demo,
       lib: demo ? undefined :{
+        formats: [ 'es' ],
         entry: 'lib/index.ts',
         name: 'JuitTinyEdit',
         fileName: 'index',
@@ -24,7 +26,7 @@ export default defineConfig((env) => {
     test: {
       globals: true,
       environment: 'jsdom',
-      include: [ 'lib/**/*.test.ts' ],
+      include: [ 'test/**/*.test.ts' ],
       coverage: {
         provider: 'v8',
         reporter: [ 'text', 'html' ],

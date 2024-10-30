@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { getSelectionOffsets, getSelectionRange, restoreSelection } from './selection'
+import { getSelectionOffsets, getSelectionRange, restoreSelection } from '../lib/selection'
 
 describe('Selection', () => {
   const selection = document.getSelection()!

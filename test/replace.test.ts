@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { getOffsetsRange } from './range'
-import { replaceRange } from './replace'
+import { getOffsetsRange } from '../lib/range'
+import { replaceRange } from '../lib/replace'
 
-import type { DirectedRange } from './range'
+import type { DirectedRange } from '../lib/range'
 
 describe('Replace', () => {
   it('should replace some content and sanitize', () => {
