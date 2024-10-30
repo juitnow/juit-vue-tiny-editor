@@ -135,6 +135,12 @@ export function getOffsetsRange(
     // end is always calculated at the *end* of the text node
     if ((end > 0) && (end <= length)) {
       range.setEnd(text, end)
+      // this is needed to avoid selecting the entire editor element when
+      // restoring selection after an input event at the *end* of the content
+      if (end === start) {
+        range.setStart(text, start)
+        return range
+      }
     }
 
     start -= length
