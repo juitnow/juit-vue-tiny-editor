@@ -3,14 +3,14 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "build": "npm run check && vite build",
-    "check": "vue-tsc --build --force && eslint",
+    "build": "npm run check && vite build --mode=demo && vite build --mode=production",
+    "build-demo": "npm run check && vite build --mode=demo",
+    "build-lib": "npm run check && vite build --mode=production",
+    "check": "vue-tsc --build --force && vitest run && eslint",
     "deploy-dev": "wrangler deploy",
     "deploy-prod": "wrangler deploy --env=production",
     "dev": "vite",
-    "preview": "vite preview",
-    "test": "vitest",
-    "updates": "rm -rf node_modules package-lock.json && npx @juit/check-updates && npm install"
+    "test": "vitest"
   },
   "peerDependencies": {
     "vue": "^3.5.12"
