@@ -1,7 +1,7 @@
 import configurations from '@plugjs/eslint-plugin'
 import vuePlugin from 'eslint-plugin-vue'
-import vueParser from 'vue-eslint-parser'
 import * as espree from 'espree'
+import vueParser from 'vue-eslint-parser'
 
 export default [
   // ===== GENERAL JS/TS CONFIGURATIONS FROM PLUGJS AND VUE ====================
@@ -81,6 +81,7 @@ export default [
     name: 'local/ignores',
     ignores: [
       'dist/',
+      'demo/',
       'public/',
     ],
   },
