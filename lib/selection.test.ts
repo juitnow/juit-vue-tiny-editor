@@ -132,10 +132,10 @@ describe('Selection', () => {
   it('should restore the selection from invalid offsets', () => {
     selection.removeAllRanges()
 
-    restoreSelection(editor, { start: -123, end: 123 })
-    expect(selection.anchorNode).toBe(editor)
-    expect(selection.focusNode).toBe(editor)
+    restoreSelection(document.body, { start: -123, end: 123 })
+    expect(selection.anchorNode).toBe(before)
+    expect(selection.focusNode).toBe(after)
     expect(selection.anchorOffset).toBe(0)
-    expect(selection.focusOffset).toBe(1)
+    expect(selection.focusOffset).toBe(5)
   })
 })

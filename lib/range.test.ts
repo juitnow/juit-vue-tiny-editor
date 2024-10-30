@@ -107,6 +107,16 @@ describe('Range', () => {
     expect(range.backwards).toBe(true)
   })
 
+  it('should calculate the correct range from zero offsets', () => {
+    const offsets = { start: 0, end: 0, backwards: true }
+    const range = getOffsetsRange(editor, offsets)
+    expect(range.startContainer).toBe(content)
+    expect(range.startOffset).toBe(0)
+    expect(range.endContainer).toBe(content)
+    expect(range.endOffset).toBe(0)
+    expect(range.backwards).toBe(true)
+  })
+
   it('should calculate the correct range from some offsets', () => {
     const offsets = { start: 18, end: 18, backwards: false }
     const range = getOffsetsRange(document.body, offsets)
@@ -119,11 +129,11 @@ describe('Range', () => {
 
   it('should not go beyond the extend of the element when offsets are wonky', () => {
     const offsets = { start: -123, end: 123, backwards: false }
-    const range = getOffsetsRange(editor, offsets)
-    expect(range.startContainer).toBe(editor)
+    const range = getOffsetsRange(document.body, offsets)
+    expect(range.startContainer).toBe(before)
     expect(range.startOffset).toBe(0)
-    expect(range.endContainer).toBe(editor)
-    expect(range.endOffset).toBe(1)
+    expect(range.endContainer).toBe(after)
+    expect(range.endOffset).toBe(5)
     expect(range.backwards).toBeUndefined()
   })
 })

@@ -119,25 +119,39 @@ export function getOffsetsRange(
   if (offsets.backwards) range.backwards = true
   let { start, end } = offsets
 
+  let firstNode: Text | null = null
+  let lastNode: Text | null = null
+  let foundStart: boolean | string = false
+  let foundEnd: boolean | string = false
+
   const iterator = document.createNodeIterator(parent, NodeFilter.SHOW_TEXT)
   for (
     let text = iterator.nextNode() as Text | null;
     text && ((start >= 0) || (end > 0));
     text = iterator.nextNode() as Text | null
   ) {
+    if (! firstNode) firstNode = text
+    lastNode = text
+
     const length = text.nodeValue!.length
 
     // start is always calculated at the *start* of the text node
     if ((start >= 0) && (start < length)) {
+      foundStart = true
       range.setStart(text, start)
+      if (start === end) {
+        foundEnd = 'extra'
+        range.setEnd(text, end)
+        return range
+      }
     }
 
     // end is always calculated at the *end* of the text node
     if ((end > 0) && (end <= length)) {
+      foundEnd = true
       range.setEnd(text, end)
-      // this is needed to avoid selecting the entire editor element when
-      // restoring selection after an input event at the *end* of the content
       if (end === start) {
+        foundStart = 'extra'
         range.setStart(text, start)
         return range
       }
@@ -146,6 +160,9 @@ export function getOffsetsRange(
     start -= length
     end -= length
   }
+
+  if ((! foundStart) && (firstNode)) range.setStart(firstNode, 0)
+  if ((! foundEnd) && (lastNode)) range.setEnd(lastNode, lastNode.length)
 
   return range
 }
