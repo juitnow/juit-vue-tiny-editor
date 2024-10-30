@@ -1,5 +1,5 @@
 {
-  "name": "@juit/vue-tinyedit",
+  "name": "@juit/vue-tiny-edit",
   "version": "0.0.1",
   "type": "module",
   "exports": {
@@ -38,5 +38,18 @@
     "vue": "^3.5.12",
     "vue-tsc": "^2.1.8"
   },
-  "files": [ "dist", "lib" ]
+  "author": "Juit Developers <developers@juit.com>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/juitnow/juit-vue-tiny-edit.git"
+  },
+  "keywords": [ "vue", "mentions", "editor", "rich-text" ],
+  "bugs": {
+    "url": "https://github.com/juitnow/juit-vue-tiny-edit/issues"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "files": [ "dist" ]
 }
