@@ -255,6 +255,9 @@ function sanitizeEmpty(parent: Element): void {
  * @returns The same `parent` specified as an argument
  */
 export function sanitize(parent: Element): Element {
+  // Edge case: empty editor
+  if (parent.innerHTML === '<br>') return parent
+
   // Cleanup before we start
   parent.normalize()
 

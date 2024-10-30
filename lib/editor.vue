@@ -130,11 +130,10 @@ function commit(): void {
   const mentions = clone.querySelectorAll('mention')
   for (const mention of mentions) mention.removeAttribute('contenteditable')
 
-  // Sanitize and clean our HTML, then update the model
-  let string = clone.innerHTML
-  string = string.replaceAll('&nbsp;', ' ')
-  if (string === '<br>') string = '' // all content was deleted
-  html.value = string.trimEnd() // remove trailing whitespace
+  // Clean our HTML, then update the model
+  const string = clone.innerHTML
+  html.value = string === '<br>' ? '' : // edge case: empty editor
+    string.replaceAll('&nbsp;', ' ').trimEnd() // remove trailing whitespace
 }
 
 /** Compute the mention range according to changes th the selection */
