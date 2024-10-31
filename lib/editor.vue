@@ -1,24 +1,39 @@
 <template>
   <div class="juit-tiny-edit">
     <!-- our mentions popup -->
-    <div ref="popupRef" class="-jte-mentions-popup">
-      <div ref="listRef" class="-jte-mentions-list">
-        <div
-          v-for="(mention, i) in mentionsList"
+    <div ref="mentionsPopupRef" class="-jte-mentions-popup">
+      <ul ref="mentionsListRef">
+        <li
+          v-for="(mention, i) in mentionsEntries"
           :key="i"
           :class="{ '-jte-mentions-selected': mentionsIndex === i }"
-          class="-jte-mentions-entry"
           @mousedown="applyMention(mention.ref, mention.value)"
         >
-          <span class="-jte-mentions-text">{{ mention.value }}</span>
-          <span class="-jte-mentions-ref">&nbsp;{{ mention.ref }}</span>
-        </div>
-      </div>
+          <div class="-jte-mentions-entry">
+            {{ mention.value }}
+            <span class="-jte-mentions-ref">{{ mention.ref }}</span>
+          </div>
+        </li>
+      </ul>
       <div v-if="! mentionsReady" class="-jte-mentions-waiting">
         {{ mentionsText }}{{ dotsString }}
       </div>
-      <div v-else-if="! mentionsList.length" class="-jte-mentions-none">
+      <div v-else-if="! mentionsEntries.length" class="-jte-mentions-none">
         {{ mentionsText }}
+      </div>
+    </div>
+
+    <!-- our links popup -->
+    <div ref="linksPopupRef" class="-jte-links-popup">
+      <div>
+        <label for="text">&AElig;</label>
+        <input name="text" type="text" value="foobarbaz">
+        <button>&#x2715;</button>
+      </div>
+      <div>
+        <label for="text">&sect;</label>
+        <input type="text" value="http://www">
+        <button>&#x279E;</button>
       </div>
     </div>
 
@@ -75,9 +90,11 @@ const props = defineProps({
 /** Reference to our content editable DIV */
 const editorRef = ref<HTMLDivElement | null>(null)
 /** Reference to our popup */
-const popupRef = ref<HTMLDivElement | null>(null)
+const mentionsPopupRef = ref<HTMLDivElement | null>(null)
 /** Reference to our mentions list (in the popup) DIV */
-const listRef = ref<HTMLDivElement | null>(null)
+const mentionsListRef = ref<HTMLDivElement | null>(null)
+/** Reference to our links popup */
+const linksPopupRef = ref<HTMLDivElement | null>(null)
 
 /** The `Range` of the current selection, if within our editor */
 const selected = shallowRef<Range & { backwards?: boolean } | null>(null)
@@ -94,7 +111,7 @@ const mentionsText = computed(() => mentionsRange.value?.toString() || '')
 /** Computed to see if mentions (from our prop) are ready */
 const mentionsReady = computed(() => !! props.mentions)
 /** Computed list of mentions that match the current text */
-const mentionsList = computed(() => {
+const mentionsEntries = computed(() => {
   const text = mentionsText.value.substring(1).toLowerCase()
 
   if (! props.mentions) return []
@@ -212,15 +229,15 @@ function onKeydown(event: KeyboardEvent): void {
         event.preventDefault()
         break
       case 'ArrowDown':
-        mentionsIndex.value = Math.min(mentionsIndex.value + 1, mentionsList.value.length - 1)
+        mentionsIndex.value = Math.min(mentionsIndex.value + 1, mentionsEntries.value.length - 1)
         event.preventDefault()
         break
       case 'PageDown':
-        mentionsIndex.value = Math.min(mentionsIndex.value + 4, mentionsList.value.length - 1)
+        mentionsIndex.value = Math.min(mentionsIndex.value + 4, mentionsEntries.value.length - 1)
         event.preventDefault()
         break
       case 'End':
-        mentionsIndex.value = mentionsList.value.length - 1
+        mentionsIndex.value = mentionsEntries.value.length - 1
         event.preventDefault()
         break
       case 'Escape':
@@ -228,7 +245,7 @@ function onKeydown(event: KeyboardEvent): void {
         event.preventDefault()
         break
       case 'Enter': {
-        const mention = mentionsList.value[mentionsIndex.value]
+        const mention = mentionsEntries.value[mentionsIndex.value]
         if (mention) applyMention(mention.ref, mention.value)
         event.preventDefault()
         break
@@ -305,11 +322,13 @@ onMounted(() => {
 
   // References to our editor, popup, and list
   if (! editorRef.value) throw new Error('Editor not referenced')
-  if (! popupRef.value) throw new Error('Popup not referenced')
-  if (! listRef.value) throw new Error('List not referenced')
+  if (! mentionsPopupRef.value) throw new Error('Popup not referenced')
+  if (! mentionsListRef.value) throw new Error('List not referenced')
+  if (! linksPopupRef.value) throw new Error('Popup not referenced')
   const editor = editorRef.value
-  const popup = popupRef.value
-  const list = listRef.value
+  const mentionsPopup = mentionsPopupRef.value
+  const mentionsList = mentionsListRef.value
+  const linksPopup = linksPopupRef.value
 
   /* On changes to the _local_ HTML, trigger an emit on our model value */
   watch(html, (html) => model.value = html)
@@ -332,35 +351,24 @@ onMounted(() => {
     else if (dotsInterval) clearInterval(dotsInterval)
   }, { immediate: true })
 
-  /* Watch our mentions index and update the popup */
-  watch([ mentionsIndex, mentionsRange, mentionsList ], ([ index, range, mentionable ], [ oldIndex = -1 ]) => {
-    // Make sure that our index is within acceptable bounds
-    if (index >= mentionable.length) index = Math.max(mentionable.length - 1, 0)
-    mentionsIndex.value = index
-
-    // No list or no popup, nothing to do
-    if (! popup) return
-    if (! list) return
-
-    // No range, hide and reset the popup
-    if (! range) {
-      mentionsIndex.value = 0
-      popup.style.display = 'none'
-      popup.style.top = '0'
-      popup.style.left = '0'
-      list.scrollTop = 0
+  /* Watch our links and update the popup */
+  watch([ isLink ], ([ link ]) => {
+    if (! link) {
+      linksPopup.style.display = 'none'
+      linksPopup.style.top = '0'
+      linksPopup.style.left = '0'
       return
     }
 
     // Wait for the next tick to make sure the DOM is updated
     nextTick(() => {
       // Position and show the popup
-      popup.style.display = 'block'
+      linksPopup.style.display = 'block'
 
-      const rangeRect = range.getBoundingClientRect()
+      const rangeRect = link.getBoundingClientRect()
       const editorRect = editor.getBoundingClientRect()
 
-      const popupStyle = getComputedStyle(popup)
+      const popupStyle = getComputedStyle(linksPopup)
       const popupWidth = parseInt(popupStyle.width)
       const popupHeight = parseInt(popupStyle.height)
 
@@ -368,25 +376,71 @@ onMounted(() => {
       const fitsBottom = rangeRect.bottom + popupHeight < editorRect.bottom
       const fitsRight = rangeRect.left + popupWidth < editorRect.right
 
-      popup.style.top = (! fitsBottom && fitsTop) ?
-      `${rangeRect.top - popupHeight + window.scrollY - 3}px` :
-      `${rangeRect.bottom + window.scrollY + 3}px`
-      popup.style.left = fitsRight ?
-      `${rangeRect.left + window.scrollX}px` :
-      `${editorRect.right - popupWidth - window.scrollX}px`
+      linksPopup.style.top = (! fitsBottom && fitsTop) ?
+        `${rangeRect.top - popupHeight + window.scrollY - 3}px` :
+        `${rangeRect.bottom + window.scrollY + 3}px`
+      linksPopup.style.left = fitsRight ?
+        `${rangeRect.left + window.scrollX}px` :
+        `${editorRect.right - popupWidth - window.scrollX}px`
+    })
+  }, { immediate: true })
+
+  /* Watch our mentions index and update the popup */
+  watch([ mentionsIndex, mentionsRange, mentionsEntries ], ([ index, range, entries ], [ oldIndex = -1 ]) => {
+    // Make sure that our index is within acceptable bounds
+    if (index >= entries.length) index = Math.max(entries.length - 1, 0)
+    mentionsIndex.value = index
+
+    // No list or no popup, nothing to do
+    if (! mentionsPopup) return
+    if (! mentionsList) return
+
+    // No range, hide and reset the popup
+    if (! range) {
+      mentionsIndex.value = 0
+      mentionsPopup.style.display = 'none'
+      mentionsPopup.style.top = '0'
+      mentionsPopup.style.left = '0'
+      mentionsList.scrollTop = 0
+      return
+    }
+
+    // Wait for the next tick to make sure the DOM is updated
+    nextTick(() => {
+      // Position and show the popup
+      mentionsPopup.style.display = 'block'
+
+      const rangeRect = range.getBoundingClientRect()
+      const editorRect = editor.getBoundingClientRect()
+
+      const popupStyle = getComputedStyle(mentionsPopup)
+      const popupWidth = parseInt(popupStyle.width)
+      const popupHeight = parseInt(popupStyle.height)
+
+      const fitsTop = rangeRect.top - popupHeight > editorRect.top
+      const fitsBottom = rangeRect.bottom + popupHeight < editorRect.bottom
+      const fitsRight = rangeRect.left + popupWidth < editorRect.right
+
+      mentionsPopup.style.top = (! fitsBottom && fitsTop) ?
+        `${rangeRect.top - popupHeight + window.scrollY - 3}px` :
+        `${rangeRect.bottom + window.scrollY + 3}px`
+      mentionsPopup.style.left = fitsRight ?
+        `${rangeRect.left + window.scrollX}px` :
+        `${editorRect.right - popupWidth - window.scrollX}px`
 
       // Scroll the list to make sure the selected item is visible
-      const item = list.querySelectorAll('.mentions-entry')[mentionsIndex.value]
+      const item = mentionsList.querySelectorAll('li')[mentionsIndex.value]
       if (! item) return
 
-      // Get the bounding rectangles for the list and the selected item
-      const listRect = list.getBoundingClientRect()
-      const itemRect = item.getBoundingClientRect()
-
-      // Figure out top and bottom margins for the item
       const style = getComputedStyle(item)
-      const marginTop = parseInt(style.marginTop)
-      const marginBottom = parseInt(style.marginBottom)
+      const topBorder = parseFloat(style.getPropertyValue('border-top-width')) || 0
+      const bottomBorder= parseFloat(style.getPropertyValue('border-bottom-width')) || 0
+      console.log('borders', topBorder, bottomBorder)
+
+
+      // Get the bounding rectangles for the list and the selected item
+      const listRect = mentionsList.getBoundingClientRect()
+      const itemRect = item.getBoundingClientRect()
 
       // Some CSS magic to scroll the list
       const topTop = itemRect.top - listRect.top
@@ -397,19 +451,19 @@ onMounted(() => {
       if (index > oldIndex) {
         // Element is hidden below the visible list
         if (relativeBtm > listRect.height) {
-          list.scrollTop += btmBtm + marginBottom
+          mentionsList.scrollTop += btmBtm - bottomBorder
           // Element is hidden above the visible list
         } else if (topTop < 0) {
-          list.scrollTop += topTop - marginTop
+          mentionsList.scrollTop += topTop + topBorder
         }
         // Going up
       } else {
         // Element is hidden above the visible list
         if (topTop < 0) {
-          list.scrollTop += topTop - marginTop
+          mentionsList.scrollTop += topTop + topBorder
           // Element is hidden below the visible list
         } else if (btmBtm > 0) {
-          list.scrollTop += relativeBtm - listRect.height + marginBottom
+          mentionsList.scrollTop += relativeBtm - listRect.height - bottomBorder
         }
       }
     })
@@ -463,100 +517,194 @@ defineExpose({
 </script>
 
 <style lang="pcss">
+:root {
+  --jte-text: currentColor;
+  --jte-text-inactive: #666;
+  --jte-border-radius: 5px;
+  --jte-border-color: #ccc;
+  --jte-shade: #eee;
+
+  --jte-mention-color: #090;
+  --jte-mention-padding: 0.5em;
+  --jte-mention-width: 0.75em;
+  --jte-mention-background: var(--jte-shade);
+
+  --jte-popup-background: #fff;
+  --jte-popup-font-size: 0.85em;
+}
+
 .juit-tiny-edit {
   display: flex;
   align-items: stretch;
 
+  /* ===== EDITOR =========================================================== */
+
   .-jte-editor {
     width: 100%;
-    background-color: #eee;
     box-sizing: border-box;
-    /* white-space-collapse: preserve; */
     padding: 0.25em;
 
     mention {
-      background-color: #ccc;
-      border-radius: 0.25em;
-      padding: 0em 0.4em 0.05em 0;
-      margin: 0 0.2em;
+      background-color: var(--jte-shade);
+
+      border-width: 1px;
+      border-style: solid;
+      border-color: var(--jte-border-color);
+      border-radius: var(--jte-border-radius);
+      border-left-width: var(--jte-mention-width);
+      border-left-color: var(--jte-mention-color);
+      border-left-style: solid;
+
+      padding-right: var(--jte-mention-width);
+      padding-left: var(--jte-mention-padding);
+      padding-bottom: 0.125em;
+
       cursor: default;
       user-select: none;
       font-weight: normal;
       font-style: normal;
       text-decoration: none;
-
-      &::before {
-        content: '';
-        background-color: #090;
-        color: #fff;
-        padding: 0em 0.2em 0.05em 0.25em;
-        margin-right: 0.25em;
-        border-radius: 0.25em 0 0 0.25em;
-      }
     }
   }
 
-  /** Our mentions popul */
+  /* ===== MENTIONS POPUP =================================================== */
+
+  /** Our mentions popup */
   .-jte-mentions-popup {
-    position: absolute;
-    background-color: #fff;
-    border: 1px solid #ccc;
-    border-radius: 0.25em;
-    overflow: hidden;
     display: none;
+    position: absolute;
+    overflow: hidden;
     cursor: pointer;
     min-width: 8em;
     z-index: 1000;
 
-    /** List of all our available mentions */
-    .-jte-mentions-list {
+    background-color: var(--jte-popup-background);
+    border-radius: var(--jte-border-radius);
+    border-color: var(--jte-border-color);
+    border-style: solid;
+    border-width: 1px;
+
+    /** Our list of mentions */
+    ul {
       overflow: scroll;
-      max-height: 7em;
-      scroll-top: 10px;
+      max-height: 6.5em;
       white-space: nowrap;
+      margin: 0;
+      padding: 0;
     }
 
-    /** Style for any matching mention entry */
-    .-jte-mentions-entry {
-      margin: 5px 0;
-      padding: 0 0.75em;
-      color: #666;
+    /** Each mention entry */
+    li {
+      list-style-type: none;
+      border-top: 1px solid transparent;
+      border-bottom: 1px solid transparent;
+      font-size: var(--jte-popup-font-size);
+      color: var(--jte-text-inactive);
 
-      /** Smaller refs */
-      .-jte-mentions-ref {
-        font-size: 0.75em;
-        font-style: italic;
-      }
+      /** Inside of our mentions entry */
+      .-jte-mentions-entry {
+        padding-block: 0.125em;
+        padding-inline: var(--jte-mention-padding);
+        border-left-width: var(--jte-mention-width);
+        border-left-style: solid;
+        border-left-color: transparent;
 
-      /** Extra stuff for selected mention */
-      &.-jte-mentions-selected {
-        color: #000;
-        padding: 0 0.75em 0 0;
-        background-color: #ccc;
-
-        /** Tag to highlight the current selected entry */
-        &::before {
-          content: '';
-          background-color: #090;
-          padding: 0em 0.25em 0.05em 0.25em;
-          margin-right: 0.25em;
+        /** Refs want a smaller font */
+        .-jte-mentions-ref {
+          margin-left: 0.5em;
+          font-size: 0.85em;
+          font-style: italic;
         }
       }
+
+      /** Selected list item */
+      &.-jte-mentions-selected {
+        color: var(--jte-text);
+        background-color: var(--jte-shade);
+        border-color: var(--jte-border-color);
+
+        /** Apply our "tag" to the slected mention */
+        .-jte-mentions-entry {
+          border-color: var(--jte-mention-color);
+        }
+      }
+
+      /** No borders for first and last item */
+      &:first-child { border-top: none; }
+      &:last-child { border-bottom: none; }
     }
 
+    /** Basic style for waiting / no item found */
+    .-jte-mentions-waiting, .-jte-mentions-none {
+      font-size: var(--jte-popup-font-size);
+      color: var(--jte-text-inactive);
+      border-left-width: var(--jte-mention-width);
+      border-left-style: solid;
+      border-color: transparent;
+      padding-block: 0.125em;
+      padding-inline: var(--jte-mention-padding);
+    }
+
+    /** Waiting is in italic */
     .-jte-mentions-waiting {
-      margin: 5px 0;
-      padding: 0 0.75em;
       font-style: italic;
-      color: #666;
     }
 
-    /** Style for when no mention matches our input */
+    /** None has a grey tab */
     .-jte-mentions-none {
-      margin: 5px 0;
-      padding: 0 0.75em;
-      font-style: italic;
-      color: #ccc;
+      border-color: var(--jte-shade);
+    }
+  }
+
+  /* ===== LINKS POPUP ====================================================== */
+
+  .-jte-links-popup {
+    position: absolute;
+    background-color: #fff;
+    border: 1px solid #bbb;
+    border-radius: 0.25em;
+    overflow: hidden;
+    display: none;
+    cursor: pointer;
+    /* width: 16em; */
+    z-index: 1000;
+    padding: 0.125em;
+    user-select: none;
+
+    label, input, button {
+      display: inline-block;
+      margin: 0.25em;
+      padding: 0.25em;
+      font-size: 0.75em;
+      border: 1px solid #bbb;
+      border-radius: 0.25em;
+    }
+
+    label {
+      min-width: 1em;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      margin-right: 0;
+
+      color: #fff;
+      text-align: center;
+      background-color: #ccc;
+    }
+
+    input {
+      min-width: 12em;
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+      margin-left: 0;
+      border-left: 0;
+    }
+
+    button {
+      min-width: 2em;
+      background-color: #ccc;
+      color: #fff;
+      border-radius: 0.25em;
+      cursor: pointer;
     }
   }
 }
