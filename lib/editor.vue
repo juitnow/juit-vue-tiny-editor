@@ -527,7 +527,6 @@ defineExpose({
   --jte-mention-color: #090;
   --jte-mention-padding: 0.5em;
   --jte-mention-width: 0.75em;
-  --jte-mention-background: var(--jte-shade);
 
   --jte-popup-background: #fff;
   --jte-popup-font-size: 0.85em;
@@ -567,27 +566,32 @@ defineExpose({
     }
   }
 
-  /* ===== MENTIONS POPUP =================================================== */
-
-  /** Our mentions popup */
-  .-jte-mentions-popup {
+  /** Popups basics */
+  .-jte-mentions-popup, .-jte-links-popup {
     display: none;
     position: absolute;
-    overflow: hidden;
-    cursor: pointer;
-    min-width: 8em;
     z-index: 1000;
 
+    font-size: var(--jte-popup-font-size);
     background-color: var(--jte-popup-background);
     border-radius: var(--jte-border-radius);
     border-color: var(--jte-border-color);
     border-style: solid;
     border-width: 1px;
+  }
+
+  /* ===== MENTIONS POPUP =================================================== */
+
+  /** Our mentions popup */
+  .-jte-mentions-popup {
+    overflow: hidden;
+    cursor: pointer;
+    min-width: 8em;
 
     /** Our list of mentions */
     ul {
       overflow: scroll;
-      max-height: 6.5em;
+      max-height: calc(7.5em + 3px);
       white-space: nowrap;
       margin: 0;
       padding: 0;
@@ -598,13 +602,13 @@ defineExpose({
       list-style-type: none;
       border-top: 1px solid transparent;
       border-bottom: 1px solid transparent;
-      font-size: var(--jte-popup-font-size);
       color: var(--jte-text-inactive);
 
       /** Inside of our mentions entry */
       .-jte-mentions-entry {
         padding-block: 0.125em;
-        padding-inline: var(--jte-mention-padding);
+        padding-left: var(--jte-mention-padding);
+        padding-right: 1.5em;
         border-left-width: var(--jte-mention-width);
         border-left-style: solid;
         border-left-color: transparent;
@@ -659,36 +663,29 @@ defineExpose({
   /* ===== LINKS POPUP ====================================================== */
 
   .-jte-links-popup {
-    position: absolute;
-    background-color: #fff;
-    border: 1px solid #bbb;
-    border-radius: 0.25em;
-    overflow: hidden;
-    display: none;
-    cursor: pointer;
-    /* width: 16em; */
-    z-index: 1000;
-    padding: 0.125em;
     user-select: none;
+    padding: 0.125em;
 
     label, input, button {
       display: inline-block;
       margin: 0.25em;
-      padding: 0.25em;
-      font-size: 0.75em;
-      border: 1px solid #bbb;
-      border-radius: 0.25em;
+      padding: 0.125em 0.5em;
+      font-size: 1em;
+      border-width: 1px;
+      border-style: solid;
+      border-color: var(--jte-border-color);
+      border-radius: var(--jte-border-radius);
     }
 
     label {
-      min-width: 1em;
+      min-width: 2em;
+      padding-inline: 0;
       border-top-right-radius: 0;
       border-bottom-right-radius: 0;
       margin-right: 0;
-
-      color: #fff;
       text-align: center;
-      background-color: #ccc;
+
+      background-color: var(--jte-shade);
     }
 
     input {
@@ -701,10 +698,12 @@ defineExpose({
 
     button {
       min-width: 2em;
-      background-color: #ccc;
-      color: #fff;
-      border-radius: 0.25em;
+      background-color: var(--jte-shade);
       cursor: pointer;
+
+      &:hover {
+        background-color: var(--jte-border-color);
+      }
     }
   }
 }
