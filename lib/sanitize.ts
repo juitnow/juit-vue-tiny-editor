@@ -118,19 +118,22 @@ function sanitizeStyles(
           child.append(document.createElement('br'))
         }
 
-      // Mention is a bit of a a special case (our custom element)
-      } else if (tagName === 'mention') {
-        const ref = element.getAttribute('ref')
-        const value = element.textContent
+      // Mentions are implemented as <link rel="mention" name="..." title="...">
+      } else if (tagName === 'link') {
+        const rel = element.getAttribute('rel')
+        if (rel !== 'mention') continue
 
-        if (!(value && ref)) continue // empty mentions are stripped
+        const name = element.getAttribute('name')
+        const title = element.getAttribute('title')
+        if (!(name && title)) continue
 
-        const mention = document.createElement('mention')
-        mention.setAttribute('contenteditable', 'false')
-        mention.setAttribute('ref', ref)
-        mention.append(value)
+        const link = document.createElement('link')
+        link.setAttribute('rel', 'mention')
+        link.setAttribute('title', title)
+        link.setAttribute('name', name)
+        child.append(link)
 
-        child.append(mention)
+      // Anything else is processed recursively (strip tag, keep contents)
       } else {
         child.append(sanitizeStyles(element, state))
       }
@@ -237,10 +240,12 @@ function sanitizeEmpty(parent: Element): void {
 
   const iterator = document.createNodeIterator(parent, NodeFilter.SHOW_ELEMENT)
   for (let node = iterator.nextNode(); node; node = iterator.nextNode()) {
-    if (node.nodeName.toLowerCase() === 'br') {
+    if (node.nodeName.toLowerCase() === 'link') continue // mentions
+    if (node.hasChildNodes()) continue // non-empty elements
+    if (node.nodeName.toLowerCase() === 'br') { // keep line breaks
       node.parentNode!.replaceChild(document.createTextNode('\n'), node)
     }
-    if (node.hasChildNodes()) continue
+    // remove empty elements
     node.parentNode?.removeChild(node)
   }
 
