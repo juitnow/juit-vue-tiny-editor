@@ -90,8 +90,7 @@ export function toggleTag(
   // fragment.insertBefore(beforeFragment, fragment.firstChild)
   fragment.append(afterFragment)
 
-  // Sanitize and insert
+  // Insert and sanitize
   ancestorRange.insertNode(fragment)
-
   sanitize(parent)
 }
