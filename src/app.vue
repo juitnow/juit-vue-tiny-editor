@@ -3,15 +3,20 @@
     <form>
       <input id="editable" v-model="editable" type="checkbox">
       <label for="editable">editable</label>
-      -
+      &nbsp;
       <button :style="{ 'font-weight': isBold ? 'bold' : 'normal' }" :disabled="! hasSelection" @click.prevent="editor?.bold()">
         BOLD
       </button>
       &nbsp;
-      <button :style="{ 'font-style': isItalic ? 'bold' : 'normal' }" :disabled="! hasSelection" @click.prevent="editor?.italic()">
+      <button :style="{ 'font-weight': isItalic ? 'bold' : 'normal' }" :disabled="! hasSelection" @click.prevent="editor?.italic()">
         ITALIC
       </button>
-      -
+      &nbsp;
+      <button :style="{ 'font-weight': !! isLink ? 'bold' : 'normal' }" :disabled="! hasSelection" @click.prevent="editor?.italic()">
+        LINK
+      </button>
+      &nbsp;
+      <input type="text" :value="isLink" :disabled="! isLink">
     </form>
     <tiny-edit
       ref="editor"
@@ -19,6 +24,7 @@
       class="tiny-edit"
       :editable="editable"
       :mentions="mentions"
+      @is-link="isLink = $event"
       @is-bold="isBold = $event"
       @is-italic="isItalic = $event"
       @has-selection="hasSelection = $event"
@@ -147,6 +153,7 @@ watch(initial, (current) => {
 const editor = ref<InstanceType<typeof TinyEdit>>()
 const editable = ref(true)
 
+const isLink = ref('')
 const isBold = ref(false)
 const isItalic = ref(false)
 const hasSelection = ref(false)
@@ -154,19 +161,14 @@ const hasSelection = ref(false)
 const html = ref(`hello, world!
 1<b>2</b><a href="foo"><b>3</b>4</a>5
 this <b>is a</b> ne<b>wli</b>ne
-this is <i>some</i> text
-foo<mention contenteditable="false" ref="mailto:pier">gonzo</mention>flipper
-<div>this is a div</div>
+this is <i>some</i> text,
+foo <link rel="mention" name="ivy@example.org" title="Ivy Bennett"> flipper
+<div>this<span>&nbsp;</span>is a div</div>
+
 This is an <a href="https://www.google.com/">anchor <b>with</b> href</a> fooo
 This is an <a name="flubber">anchor with name</a> fooo
 <p>this is a paragraph</p>
 another line`)
-
-watch(editor, (newEditor, oldEditor) => {
-  console.log('NEW', !! newEditor, 'OLD', !! oldEditor)
-  if (newEditor) console.log('model', newEditor, newEditor)
-}, { immediate: true })
-
 
 </script>
 
