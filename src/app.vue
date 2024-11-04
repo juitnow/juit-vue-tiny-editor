@@ -3,6 +3,10 @@
     <form>
       <input id="editable" v-model="editable" type="checkbox">
       <label for="editable">editable</label>
+      &nbsp;-&nbsp;
+      <button @click.prevent="populate()">
+        Sample Text
+      </button>
     </form>
     <tiny-edit
       ref="editor"
@@ -135,22 +139,16 @@ watch(initial, (current) => {
 const editor = ref<InstanceType<typeof TinyEdit>>()
 const editable = ref(true)
 
-const isLink = ref('')
-const isBold = ref(false)
-const isItalic = ref(false)
-const hasSelection = ref(false)
+const html = ref('')
 
-const html = ref(`hello, world!
-1<b>2</b><a href="foo"><b>3</b>4</a>5
-this <b>is a</b> ne<b>wli</b>ne
-this is <i>some</i> text,
-foo <link rel="mention" name="ivy@example.org" title="Ivy Bennett"> flipper
-<div>this<span>&nbsp;</span>is a div</div>
-
-This is an <a href="https://www.google.com/">anchor <b>with</b> href</a> fooo
-This is an <a name="flubber">anchor with name</a> fooo
-<p>this is a paragraph</p>
-another line`)
+function populate(): void {
+  html.value = `This is some sample content...
+Content can be <b>bold</b> or <i>italic</i> (or even <i><b>both</b></i>).
+Mentions are supported, like <link rel="mention" name="simon@example.org" title="Simon Drake">.
+Links are also supported, either parsed from text http://www.google.com/ ...
+... or with <a href="http://www.google.com">proper <b>link</b> tags</a>.
+`
+}
 
 </script>
 
@@ -159,7 +157,6 @@ another line`)
   font-family: Arial, Helvetica, sans-serif;
 }
 .tiny-edit {
-  /* font-size: 30px; */
   margin-top: 10px;
   border: 1px solid #ccc;
   min-height: 3em;

@@ -776,7 +776,6 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
     width: 100%;
     box-sizing: border-box;
     padding: 0.25em;
-    border: 1px solid red;
     white-space: pre-wrap;
 
     .-jte-editable & {
