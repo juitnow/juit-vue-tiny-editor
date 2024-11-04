@@ -438,7 +438,6 @@ function onBeforeInput(event: InputEvent): void {
 
 /** Someone typed something in our editor, let's process it */
 function onInput(event: InputEvent): void {
-  console.log('AFTER INPUT', event.inputType, Date.now())
   const editor = editorRef.value
   if (! editor) return
 
@@ -540,8 +539,6 @@ onMounted(() => {
     const body = new DOMParser().parseFromString(model, 'text/html').body
     sanitize(body)
     editor.replaceChildren(...body.childNodes)
-    console.log('INITIAL COMMIT', editorRef.value)
-
     commit()
   }, { immediate: true })
 
@@ -636,8 +633,6 @@ onMounted(() => {
       const style = getComputedStyle(item)
       const topBorder = parseFloat(style.getPropertyValue('border-top-width')) || 0
       const bottomBorder= parseFloat(style.getPropertyValue('border-bottom-width')) || 0
-      console.log('borders', topBorder, bottomBorder)
-
 
       // Get the bounding rectangles for the list and the selected item
       const listRect = mentionsList.getBoundingClientRect()
