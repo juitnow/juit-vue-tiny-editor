@@ -23,20 +23,21 @@
     "vue": "^3.5.12"
   },
   "devDependencies": {
-    "@plugjs/eslint-plugin": "^0.2.23",
+    "@plugjs/eslint-plugin": "^0.2.24",
     "@types/node": "<21",
     "@vitejs/plugin-vue": "^5.1.4",
     "@vitest/coverage-v8": "^2.1.4",
     "@vue/test-utils": "^2.4.6",
-    "eslint": "^9.13.0",
+    "eslint": "^9.14.0",
     "eslint-plugin-vue": "^9.30.0",
     "jsdom": "^25.0.1",
     "typescript": "^5.6.3",
     "vite": "^5.4.10",
     "vite-plugin-dts": "^4.3.0",
+    "vite-svg-loader": "^5.1.0",
     "vitest": "^2.1.4",
     "vue": "^3.5.12",
-    "vue-tsc": "^2.1.8"
+    "vue-tsc": "^2.1.10"
   },
   "author": "Juit Developers <developers@juit.com>",
   "license": "Apache-2.0",
@@ -44,12 +45,19 @@
     "type": "git",
     "url": "git+ssh://git@github.com/juitnow/juit-vue-tiny-edit.git"
   },
-  "keywords": [ "vue", "mentions", "editor", "rich-text" ],
+  "keywords": [
+    "vue",
+    "mentions",
+    "editor",
+    "rich-text"
+  ],
   "bugs": {
     "url": "https://github.com/juitnow/juit-vue-tiny-edit/issues"
   },
   "directories": {
     "test": "test"
   },
-  "files": [ "dist" ]
+  "files": [
+    "dist"
+  ]
 }
