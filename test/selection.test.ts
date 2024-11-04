@@ -129,6 +129,16 @@ describe('Selection', () => {
     expect(selection.focusOffset).toBe(3)
   })
 
+  it('should restore and collapse the selection from offsets', () => {
+    selection.removeAllRanges()
+
+    restoreSelection(document.body, { start: 3, end: 17 }, true)
+    expect(selection.anchorNode).toBe(after)
+    expect(selection.focusNode).toBe(after)
+    expect(selection.anchorOffset).toBe(4)
+    expect(selection.focusOffset).toBe(4)
+  })
+
   it('should restore the selection from invalid offsets', () => {
     selection.removeAllRanges()
 

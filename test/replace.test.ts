@@ -44,7 +44,7 @@ describe('Replace', () => {
     const range2 = getOffsetsRange(element, result1)
 
     const result2 = replaceRange(element, range2, '')
-    expect(element.innerHTML).toBe('')
+    expect(element.innerHTML).toBe('<br>')
     expect(result2).toEqual({ start: 0, end: 0 })
   })
 

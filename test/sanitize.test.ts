@@ -12,9 +12,10 @@ function sanitize(html: string): string {
 
 describe('HTML Sanitizer', () => {
   it('should strip unwanted tags', () => {
-    expect(sanitize('<script>1</script>')).toEqual('')
+    expect(sanitize('<script>1</script>')).toEqual('<br>')
     expect(sanitize('1<script>2</script>3')).toEqual('13')
     expect(sanitize('1<script>2<b>3</b>4</script>5')).toEqual('15')
+    expect(sanitize('1<link rel="stylesheet">2')).toEqual('12')
   })
 
   it('should preserve content for unknown tags', () => {
@@ -60,6 +61,11 @@ describe('HTML Sanitizer', () => {
     expect(sanitize('1<p>2</p>3')).toEqual('1\n2\n3')
 
     expect(sanitize('1<br>2')).toEqual('1\n2')
+  })
+
+  it('should not produce empty contents', () => {
+    expect(sanitize('')).toEqual('<br>')
+    expect(sanitize('<br>')).toEqual('<br>')
   })
 
   it('should sanitize links', () => {
@@ -142,14 +148,17 @@ describe('HTML Sanitizer', () => {
   })
 
   it('should strp empty or invalid mentions', () => {
-    expect(sanitize('1<mention></mention>2')).toEqual('12')
-    expect(sanitize('1<mention ref="2"></mention>3')).toEqual('13')
-    expect(sanitize('1<mention>2</mention>3')).toEqual('13')
+    expect(sanitize('1<link rel="mention">2')).toEqual('12')
+    expect(sanitize('1<link rel="mention" name="2">3')).toEqual('13')
+    expect(sanitize('1<link rel="mention" title="2">3')).toEqual('13')
   })
 
   it('should sanitize mentions', () => {
-    expect(sanitize('1<mention ref="2" foo="bar">3</mention>4'))
-        .toEqual('1<mention contenteditable="false" ref="2">3</mention>4')
+    expect(sanitize('1<link rel="mention" title="2" name="3" foo="bar">4'))
+        .toEqual('1<link rel="mention" title="2" name="3">4')
+    // link as the last element...
+    expect(sanitize('1<link rel="mention" title="2" name="3" foo="bar">'))
+        .toEqual('1<link rel="mention" title="2" name="3"> ')
   })
 
   it('should sanitize and preserve link offsets even on <div>, <p>, ...', () => {
