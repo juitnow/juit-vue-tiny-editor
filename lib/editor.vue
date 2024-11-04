@@ -45,6 +45,7 @@
       ref="editorRef"
       class="-jte-editor"
       :contenteditable="editable ? 'plaintext-only' : 'false'"
+      @beforeinput="onBeforeInput($event as InputEvent)"
       @input="onInput($event as InputEvent)"
       @keydown="onKeydown($event)"
       @paste="onPaste($event)"
@@ -56,13 +57,6 @@
       <iconBold class="-jte-icon -jte-icon-bold" :class="iconClass(isBold, 'b')" @click="applyTag('b')" />
       <iconItalic class="-jte-icon -jte-icon-italic" :class="iconClass(isItalic, 'i')" @click="applyTag('i')" />
       <iconLink class="-jte-icon -jte-icon-href" :class="iconClass(isLink)" @click="applyTag('a', { href: 'http://__placeholder__/' })" />
-      <span>
-        selected={{ !! selectedLink }} /
-        previsous={{ !! previousLink }} /
-        active={{ !! activeLink }} /
-        islink={{ !! isLink }} /
-        next="{{ nextTag }}"
-      </span>
       <iconSend class="-jte-icon -jte-icon-send" :class="{ '-jte-disabled': !html, '-jte-active': !!html }" />
     </div>
   </div>
@@ -215,6 +209,8 @@ watch((selected), (newRange, oldRange) => {
   nextTag.value = ''
 })
 
+const history: (Offsets & { content: string })[] = []
+
 /* ==== FUNCTIONS =========================================================== */
 
 function iconClass(element: Element | null, tag?: string): string {
@@ -242,9 +238,31 @@ function commit(): void {
 
   // Clean our HTML, then update the model
   const string = editorRef.value.innerHTML
-  html.value = string
-  // html.value = string === '<br>' ? '' : // edge case: empty editor
-  //   string.replaceAll('&nbsp;', ' ').trimEnd() // remove trailing whitespace
+  html.value = string === '<br>' ? '' : // edge case: empty editor
+    string.replaceAll('&nbsp;', ' ').trimEnd() // remove trailing whitespace
+}
+
+function historySave(): void {
+  if (! editorRef.value) return
+
+  // Save our history
+  if (history[history.length - 1]?.content !== html.value) {
+    const offsets = getSelectionOffsets(editorRef.value) || { start: 0, end: 0 }
+    history.push({ ...offsets, content: html.value })
+    if (history.length > 100) history.shift()
+  }
+}
+
+function historyUndo(): void {
+  if (! editorRef.value) return
+  if (! selected.value) return
+
+  const entry = history.pop()
+  if (! entry) return
+
+  const body = new DOMParser().parseFromString(entry.content, 'text/html').body
+  editorRef.value.replaceChildren(...body.childNodes)
+  restoreSelection(editorRef.value, entry)
 }
 
 /** Compute the mention range according to changes th the selection */
@@ -267,6 +285,7 @@ function applyMention(name: string, value: string): void {
 
   const editor = editorRef.value
 
+  historySave()
   const fragment = document.createDocumentFragment()
   const element = document.createElement('link')
   element.setAttribute('rel', 'mention')
@@ -295,6 +314,7 @@ function applyTag(tagName: string, attributes: Record<string, string> = {}): voi
     return
   }
 
+  historySave()
   const offsets = getRangeOffsets(editor, selected.value)
   toggleTag(editor, selected.value, tagName, attributes)
   selectWithOffsets(offsets)
@@ -338,6 +358,10 @@ function onKeydown(event: KeyboardEvent): void {
         break
       case 'i':
         applyTag('i')
+        event.preventDefault()
+        break
+      case 'z':
+        historyUndo()
         event.preventDefault()
         break
     }
@@ -394,10 +418,27 @@ function onPaste(event: ClipboardEvent): void {
   commit()
 }
 
+/** If deleting a bunch of content, ensure links are removed, too... */
+function onBeforeInput(event: InputEvent): void {
+  if (! editorRef.value) return
+  if (! selected.value) return
+
+  historySave()
+
+  if ((!selected.value.collapsed) &&
+      ((event.inputType === 'deleteContentBackward') ||
+       (event.inputType === 'deleteContentForward'))) {
+    event.preventDefault()
+    event.stopPropagation()
+    const offsets = replaceRange(editorRef.value, selected.value, '')
+    selectWithOffsets(offsets, true)
+    commit()
+  }
+}
 
 /** Someone typed something in our editor, let's process it */
 function onInput(event: InputEvent): void {
-  console.log(event.inputType, Date.now())
+  console.log('AFTER INPUT', event.inputType, Date.now())
   const editor = editorRef.value
   if (! editor) return
 
@@ -499,6 +540,7 @@ onMounted(() => {
     const body = new DOMParser().parseFromString(model, 'text/html').body
     sanitize(body)
     editor.replaceChildren(...body.childNodes)
+    console.log('INITIAL COMMIT', editorRef.value)
 
     commit()
   }, { immediate: true })

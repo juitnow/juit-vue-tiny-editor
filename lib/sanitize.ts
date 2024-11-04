@@ -240,6 +240,7 @@ function sanitizeEmpty(parent: Element): void {
 
   const iterator = document.createNodeIterator(parent, NodeFilter.SHOW_ELEMENT)
   for (let node = iterator.nextNode(); node; node = iterator.nextNode()) {
+    if (node === parent) continue // obviously skip the parent node
     if (node.nodeName.toLowerCase() === 'link') continue // mentions
     if (node.hasChildNodes()) continue // non-empty elements
     if (node.nodeName.toLowerCase() === 'br') { // keep line breaks
@@ -250,6 +251,10 @@ function sanitizeEmpty(parent: Element): void {
   }
 
   parent.normalize()
+  // Edge case, empty editor
+  if (! parent.hasChildNodes()) {
+    parent.append(document.createElement('br'))
+  }
 }
 
 /**
@@ -275,6 +280,7 @@ export function sanitize(parent: Element): Element {
   if (sanitized.lastChild?.nodeName.toLowerCase() === 'link') {
     sanitized.append(document.createTextNode(' '))
   }
+
   // Replace our contents
   parent.replaceChildren(sanitized)
 
