@@ -294,7 +294,6 @@ function applyMention(name: string, value: string): void {
   fragment.append(element, ' ')
 
   const offsets = replaceRange(editor, mentionsRange.value, fragment)
-  offsets.start = offsets.end
   selectWithOffsets(offsets, true)
   mentionsRange.value = null
   commit()

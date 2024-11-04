@@ -51,18 +51,20 @@ export function restoreSelection(
     offsets: Offsets,
     collapse = false,
 ): DirectedRange {
+  if (collapse) offsets = { start: offsets.end, end: offsets.end }
   const range = getOffsetsRange(parent, offsets)
   const { startContainer, startOffset, endContainer, endOffset, backwards } = range
 
   // Selection can be forwards or backwards... restore correctly
   const selection = document.getSelection()
-  if (! selection) return range
 
-  if (backwards) {
-    selection.setBaseAndExtent(endContainer, endOffset, startContainer, startOffset)
-  } else {
-    selection.setBaseAndExtent(startContainer, startOffset, endContainer, endOffset)
+  if (selection) {
+    if (backwards) {
+      selection.setBaseAndExtent(endContainer, endOffset, startContainer, startOffset)
+    } else {
+      selection.setBaseAndExtent(startContainer, startOffset, endContainer, endOffset)
+    }
   }
-  if (collapse) selection.collapse(startContainer, startOffset)
+
   return range
 }
