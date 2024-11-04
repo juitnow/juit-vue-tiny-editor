@@ -1,10 +1,15 @@
 import vue from '@vitejs/plugin-vue'
 import dts from 'vite-plugin-dts'
+import svg from 'vite-svg-loader'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig((env) => {
   const demo = env.mode === 'demo'
   return defineConfig({
+    plugins: [ vue(), svg(), dts({
+      tsconfigPath: './tsconfig.app.json',
+      rollupTypes: true,
+    }) ],
     build: {
       minify: false,
       sourcemap: true,
@@ -40,9 +45,5 @@ export default defineConfig((env) => {
         reportOnFailure: true,
       },
     },
-    plugins: [ vue(), dts({
-      tsconfigPath: './tsconfig.app.json',
-      rollupTypes: true,
-    }) ],
   })
 })
