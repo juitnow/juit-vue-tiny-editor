@@ -3,20 +3,6 @@
     <form>
       <input id="editable" v-model="editable" type="checkbox">
       <label for="editable">editable</label>
-      &nbsp;
-      <button :style="{ 'font-weight': isBold ? 'bold' : 'normal' }" :disabled="! hasSelection" @click.prevent="editor?.bold()">
-        BOLD
-      </button>
-      &nbsp;
-      <button :style="{ 'font-weight': isItalic ? 'bold' : 'normal' }" :disabled="! hasSelection" @click.prevent="editor?.italic()">
-        ITALIC
-      </button>
-      &nbsp;
-      <button :style="{ 'font-weight': !! isLink ? 'bold' : 'normal' }" :disabled="! hasSelection" @click.prevent="editor?.italic()">
-        LINK
-      </button>
-      &nbsp;
-      <input type="text" :value="isLink" :disabled="! isLink">
     </form>
     <tiny-edit
       ref="editor"
@@ -24,10 +10,6 @@
       class="tiny-edit"
       :editable="editable"
       :mentions="mentions"
-      @is-link="isLink = $event"
-      @is-bold="isBold = $event"
-      @is-italic="isItalic = $event"
-      @has-selection="hasSelection = $event"
       @mention="mention = $event"
     />
 
@@ -177,6 +159,7 @@ another line`)
   font-family: Arial, Helvetica, sans-serif;
 }
 .tiny-edit {
+  /* font-size: 30px; */
   margin-top: 10px;
   border: 1px solid #ccc;
   min-height: 3em;

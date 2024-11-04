@@ -42,6 +42,8 @@ export function replaceRange(
 
   // Adjust our selection offsets depending on pasted data
   const afterLength = parent.textContent?.length || 0
+  console.log('BEFORE', offsets)
+  console.log('AFTER', { ...offsets, end: offsets.end + afterLength - beforeLength })
   return { ...offsets, end: offsets.end + afterLength - beforeLength }
   // offsets.end = offsets.end + afterLength - beforeLength
 

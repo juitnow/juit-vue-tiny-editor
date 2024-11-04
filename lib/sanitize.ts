@@ -269,8 +269,13 @@ export function sanitize(parent: Element): Element {
   // Save any and all links
   const offsets = sanitizeLinks(parent)
 
-  // Sanitize the content and replace our contents
+  // Sanitize the content
   const sanitized = sanitizeStyles(parent)
+  // Append a space if the last child was a link (mention)
+  if (sanitized.lastChild?.nodeName.toLowerCase() === 'link') {
+    sanitized.append(document.createTextNode(' '))
+  }
+  // Replace our contents
   parent.replaceChildren(sanitized)
 
   // Restore the links

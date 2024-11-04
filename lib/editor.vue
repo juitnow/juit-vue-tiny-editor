@@ -1,5 +1,5 @@
 <template>
-  <div class="juit-tiny-edit">
+  <div ref="rootRef" class="juit-tiny-edit" :class="{ '-jte-editable': editable }">
     <!-- our mentions popup -->
     <div ref="mentionsPopupRef" class="-jte-mentions-popup">
       <ul ref="mentionsListRef">
@@ -7,11 +7,11 @@
           v-for="(mention, i) in mentionsEntries"
           :key="i"
           :class="{ '-jte-mentions-selected': mentionsIndex === i }"
-          @mousedown="applyMention(mention.ref, mention.value)"
+          @mousedown="applyMention(mention.name, mention.value)"
         >
           <div class="-jte-mentions-entry">
             {{ mention.value }}
-            <span class="-jte-mentions-ref">{{ mention.ref }}</span>
+            <span class="-jte-mentions-ref">{{ mention.name }}</span>
           </div>
         </li>
       </ul>
@@ -24,16 +24,19 @@
     </div>
 
     <!-- our links popup -->
-    <div ref="linksPopupRef" class="-jte-links-popup">
+    <div
+      ref="linksPopupRef"
+      class="-jte-links-popup"
+      @click="activeLink = previousLink"
+      @focusin="activeLink = previousLink"
+    >
       <div>
-        <label for="text">&AElig;</label>
-        <input name="text" type="text" value="foobarbaz">
-        <button>&#x2715;</button>
+        <iconText class="-jte-icon" />
+        <input v-model="linkText" type="text">
       </div>
-      <div>
-        <label for="text">&sect;</label>
-        <input type="text" value="http://www">
-        <button>&#x279E;</button>
+      <div :class="{ '-jte-error': !linkValid }">
+        <iconLink class="-jte-icon" />
+        <input v-model="linkHref" type="text">
       </div>
     </div>
 
@@ -45,7 +48,23 @@
       @input="onInput($event as InputEvent)"
       @keydown="onKeydown($event)"
       @paste="onPaste($event)"
+      @focusin="activeLink = null"
     />
+
+    <div class="-jte-toolbox">
+      <iconMention class="-jte-icon -jte-icon-mention" :class="{ '-jte-disabled': ! selected?.collapsed }" @click="insertMention" />
+      <iconBold class="-jte-icon -jte-icon-bold" :class="iconClass(isBold, 'b')" @click="applyTag('b')" />
+      <iconItalic class="-jte-icon -jte-icon-italic" :class="iconClass(isItalic, 'i')" @click="applyTag('i')" />
+      <iconLink class="-jte-icon -jte-icon-href" :class="iconClass(isLink)" @click="applyTag('a', { href: 'http://__placeholder__/' })" />
+      <span>
+        selected={{ !! selectedLink }} /
+        previsous={{ !! previousLink }} /
+        active={{ !! activeLink }} /
+        islink={{ !! isLink }} /
+        next="{{ nextTag }}"
+      </span>
+      <iconSend class="-jte-icon -jte-icon-send" :class="{ '-jte-disabled': !html, '-jte-active': !!html }" />
+    </div>
   </div>
 </template>
 
@@ -57,6 +76,13 @@ import { replaceRange } from './replace'
 import { sanitize } from './sanitize'
 import { getSelectionOffsets, getSelectionRange, restoreSelection } from './selection'
 import { isTagged, toggleTag } from './tags'
+// SVGs
+import iconBold from './svg/bold.svg'
+import iconItalic from './svg/italic.svg'
+import iconLink from './svg/link.svg'
+import iconMention from './svg/mention.svg'
+import iconSend from './svg/send.svg'
+import iconText from './svg/text.svg'
 
 import type { PropType } from 'vue'
 import type { Offsets } from './range'
@@ -87,6 +113,8 @@ const props = defineProps({
 
 /* ==== REFS ================================================================ */
 
+/** Reference to our root container */
+const rootRef = ref<HTMLDivElement | null>(null)
 /** Reference to our content editable DIV */
 const editorRef = ref<HTMLDivElement | null>(null)
 /** Reference to our popup */
@@ -118,16 +146,54 @@ const mentionsEntries = computed(() => {
   return Object.entries(props.mentions)
       .filter(([ _, name ]) => name.toLowerCase().startsWith(text))
       .sort(([ _a, a ], [ _b, b ]) => a.localeCompare(b))
-      .map(([ ref, value ]) => ({ ref, value }))
+      .map(([ name, value ]) => ({ name, value }))
 })
 
+/** The link associated with the *current* selection in the editor */
+const selectedLink = ref<Element | null>(null)
+/** The link currently being handled by the links popup */
+const activeLink = ref(null as any)
+/** The last link highlighted by the editor (updated by the watch below) */
+const previousLink = ref<Element | null>(null)
+/** The current link, either in the editor or in the links popup */
+const isLink = computed<Element | null>(() => selectedLink.value || activeLink.value)
+/* Watch the selected link and remember the last viable one */
+watch(selectedLink, (link) => link && (previousLink.value = link))
+/** The text of the current link */
+const linkText = ref('')
+const linkHref = ref('')
+const linkValid = computed(() => {
+  if (! linkHref.value) return true
+  try {
+    new URL(linkHref.value)
+    return true
+  } catch {
+    return false
+  }
+})
+
+watch(isLink, (link, oldLink) => {
+  linkText.value = link?.textContent || ''
+  linkHref.value = link?.getAttribute('href') || ''
+  if (linkHref.value === 'http://__placeholder__/') {
+    link?.setAttribute('href', '')
+    linkHref.value = ''
+  }
+  if ((link === null) && (oldLink !== null)) {
+    sanitize(editorRef.value!)
+  }
+})
+watch([ linkText, linkHref ], ([ text, href ]) => {
+  if (! isLink.value) return
+  isLink.value.textContent = text
+  isLink.value.setAttribute('href', href)
+  commit()
+})
 
 /** Whether the current selection is all bold */
 const isBold = ref<Element | null>(null)
 /** Whether the current selection is all italic */
 const isItalic = ref<Element | null>(null)
-/** Whether the current selection is a link */
-const isLink = ref<Element | null>(null)
 
 /** How many dots are we displaying (in "waiting for mentions" animation) */
 const dots = ref(0)
@@ -136,21 +202,49 @@ const dotsString = computed(() => '.' + '.'.repeat(dots.value % 5))
 /** Interval animating our "waiting for mentions" text */
 let dotsInterval: ReturnType<typeof setInterval> | null = null
 
+const nextTag = ref('')
+watch((selected), (newRange, oldRange) => {
+  if (oldRange === null) return
+  if (newRange === null) return
+
+  if ((oldRange.startContainer == newRange.startContainer) &&
+      (oldRange.startOffset == newRange.startOffset) &&
+      (oldRange.endContainer == newRange.endContainer) &&
+      (oldRange.endOffset == newRange.endOffset) &&
+      (oldRange?.backwards == newRange?.backwards)) return
+  nextTag.value = ''
+})
+
 /* ==== FUNCTIONS =========================================================== */
+
+function iconClass(element: Element | null, tag?: string): string {
+  if (! selected.value) return '-jte-disabled'
+
+  // If we don't have a tag, we're not processing zero-width selections
+  if (! tag) {
+    if (element) return '-jte-active'
+    if (selected.value.collapsed) return '-jte-disabled'
+    return ''
+  }
+
+  // styled, but next input will remove the style
+  if (element && (nextTag.value === tag)) return ''
+  // either styled *or* next input will add the style
+  if (element || nextTag.value === tag) return '-jte-active'
+  // not styled, but can be styled
+  return ''
+}
+
 
 /** Commit changes to the model converting our editor into HTML */
 function commit(): void {
   if (! editorRef.value) return void (html.value = '')
 
-  // Clone our editor, so we can clean up unwanted attributes
-  const clone = editorRef.value.cloneNode(true) as Element
-  const mentions = clone.querySelectorAll('mention')
-  for (const mention of mentions) mention.removeAttribute('contenteditable')
-
   // Clean our HTML, then update the model
-  const string = clone.innerHTML
-  html.value = string === '<br>' ? '' : // edge case: empty editor
-    string.replaceAll('&nbsp;', ' ').trimEnd() // remove trailing whitespace
+  const string = editorRef.value.innerHTML
+  html.value = string
+  // html.value = string === '<br>' ? '' : // edge case: empty editor
+  //   string.replaceAll('&nbsp;', ' ').trimEnd() // remove trailing whitespace
 }
 
 /** Compute the mention range according to changes th the selection */
@@ -167,21 +261,22 @@ function computeMention(): void {
 }
 
 /** Replace the current mentions range with a proper mention */
-function applyMention(ref: string, value: string): void {
+function applyMention(name: string, value: string): void {
   if (! editorRef.value) return
   if (! mentionsRange.value) return
 
   const editor = editorRef.value
 
   const fragment = document.createDocumentFragment()
-  const element = document.createElement('mention')
-  element.setAttribute('ref', ref)
-  element.append(value)
+  const element = document.createElement('link')
+  element.setAttribute('rel', 'mention')
+  element.setAttribute('name', name)
+  element.setAttribute('title', value)
   fragment.append(element, ' ')
 
   const offsets = replaceRange(editor, mentionsRange.value, fragment)
-  selected.value = restoreSelection(editor, offsets)
-  document.getSelection()?.collapseToEnd()
+  offsets.start = offsets.end
+  selectWithOffsets(offsets, true)
   mentionsRange.value = null
   commit()
 }
@@ -193,10 +288,42 @@ function applyTag(tagName: string, attributes: Record<string, string> = {}): voi
 
   const editor = editorRef.value
 
+  // If nothing is selected, this is reserved for the next tag
+  if (selected.value.collapsed) {
+    nextTag.value = tagName
+    editor.focus()
+    return
+  }
+
   const offsets = getRangeOffsets(editor, selected.value)
   toggleTag(editor, selected.value, tagName, attributes)
-  if (offsets) selected.value = restoreSelection(editor, offsets)
+  selectWithOffsets(offsets)
   commit()
+}
+
+function insertMention(): void {
+  if (! editorRef.value) return
+  if (! selected.value?.collapsed) return
+
+  const editor = editorRef.value
+
+  const offsets = getRangeOffsets(editor, selected.value)
+
+  const at = document.createTextNode('@')
+  selected.value.insertNode(at)
+
+  offsets.end += 1
+  mentionsRange.value = getOffsetsRange(editor, offsets)
+  offsets.start += 1
+  selectWithOffsets(offsets)
+}
+
+function selectWithOffsets(offsets: Offsets, collapse?: boolean): void {
+  if (! editorRef.value) return
+
+  const editor = editorRef.value
+  selected.value = restoreSelection(editor, offsets, collapse)
+  editor.focus()
 }
 
 /* ==== DOM EVENTS ========================================================== */
@@ -246,7 +373,7 @@ function onKeydown(event: KeyboardEvent): void {
         break
       case 'Enter': {
         const mention = mentionsEntries.value[mentionsIndex.value]
-        if (mention) applyMention(mention.ref, mention.value)
+        if (mention) applyMention(mention.name, mention.value)
         event.preventDefault()
         break
       }
@@ -263,33 +390,55 @@ function onPaste(event: ClipboardEvent): void {
   const text = event.clipboardData?.getData('text/html') || ''
   const offsets = replaceRange(editorRef.value, selected.value, text)
 
-  if (offsets) selected.value = restoreSelection(editorRef.value, offsets)
-  document.getSelection()?.collapseToEnd()
+  selectWithOffsets(offsets, true)
   commit()
 }
 
 
 /** Someone typed something in our editor, let's process it */
 function onInput(event: InputEvent): void {
+  console.log(event.inputType, Date.now())
   const editor = editorRef.value
   if (! editor) return
 
-  // First thing first: sanitize the content (this will also take care of links)
+  // Save the current selection and mentions
   const mentions = mentionsRange.value ? getRangeOffsets(editor, mentionsRange.value) : null
   const selection = getSelectionOffsets(editor)
+
+  // See if we need to process this event with style (bold, italic, ...)
+  if (nextTag.value &&
+      selection &&
+      (selection.start === selection.end) &&
+      (event.inputType === 'insertText') &&
+      (event.data !== '@') &&
+      (! mentionsRange.value)) {
+    const range = getOffsetsRange(editor, { start: selection.start - 1, end: selection.end })
+    toggleTag(editor, range, nextTag.value)
+  }
+  nextTag.value = ''
+
+  // First thing first: sanitize the content (this will also take care of links)
   sanitize(editor)
+
+  // Restore mentions range *after* sanitization
   if (mentions) mentionsRange.value = getOffsetsRange(editor, mentions)
+
+  // Restore the selection range
   if (selection) {
     // Edge case when all content is deleted: insert a single "<br>"
     if (editor.innerHTML === '<br>') {
       document.getSelection()?.setBaseAndExtent(editor, 0, editor, 0)
+      editor.focus()
     } else {
-      selected.value = restoreSelection(editor, selection)
+      selectWithOffsets(selection)
     }
   }
 
   // When the input is "@" we might want to trigger a mention
-  if ((! isLink.value) && (! mentionsRange.value) && (event.data === '@') && (event.inputType === 'insertText')) {
+  if ((! isLink.value) &&
+      (! mentionsRange.value) &&
+      (event.data === '@') &&
+      (event.inputType === 'insertText')) {
     const selection = document.getSelection()
     if (! selection?.anchorNode) return
     const text = getCharacters(editor, selection.anchorNode, selection.anchorOffset)
@@ -310,7 +459,17 @@ function onInput(event: InputEvent): void {
 
 /* Update the `selected` Range when the document selection changes */
 function onSelectionChange(_event: Event): void {
+  // Wipe all link information if we leave our component
+  if (!(rootRef.value && getSelectionRange(rootRef.value))) {
+    selectedLink.value = null
+    previousLink.value = null
+    activeLink.value = null
+  }
+
+  // Handle the current editor selection and remember its range (if any)
   selected.value = editorRef.value ? getSelectionRange(editorRef.value) : null
+
+  // Process any changes to mentions
   computeMention()
 }
 
@@ -472,11 +631,11 @@ onMounted(() => {
   /* Watch the selected range and infer state for bold, italic, ... */
   watch(selected, (selected) => {
     if (selected) {
-      isLink.value = isTagged(editor, selected, 'a')
+      selectedLink.value = isTagged(editor, selected, 'a')
       isBold.value = isTagged(editor, selected, 'b')
       isItalic.value = isTagged(editor, selected, 'i')
     } else {
-      isLink.value = null
+      selectedLink.value = null
       isBold.value = null
       isItalic.value = null
     }
@@ -491,42 +650,25 @@ onUnmounted(() => {
 /* ===== EMITS AND EXPOSED METHODS ========================================== */
 
 const emit = defineEmits<{
-  isLink: [ string ],
-  isBold: [ boolean ],
-  isItalic: [ boolean ],
-  hasSelection: [ boolean ],
   mention: [ string ],
 }>()
 
 /* Watch our local refs and emit */
-watch(selected, (selected) => emit('hasSelection', !! selected), { immediate: true })
-watch(isLink, (link) => emit('isLink', link?.getAttribute('href') || ''), { immediate: true })
-watch(isBold, (bold) => emit('isBold', !! bold), { immediate: true })
-watch(isItalic, (italic) => emit('isItalic', !! italic), { immediate: true })
 watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: true })
-
-
-defineExpose({
-  /** Toggle _bold_ for the current selected text */
-  bold: () => applyTag('b'),
-  /** Toggle _italic_ for the current selected text */
-  italic: () => applyTag('i'),
-  /** Toggle _link_ for the current selected text */
-  link: (href: string) => applyTag('a', { href }),
-})
 </script>
 
 <style lang="pcss">
 :root {
   --jte-text: currentColor;
-  --jte-text-inactive: #666;
+  --jte-text-inactive: #999;
   --jte-border-radius: 5px;
   --jte-border-color: #ccc;
   --jte-shade: #eee;
+  --jte-active-color: #ddf;
 
   --jte-mention-color: #090;
-  --jte-mention-padding: 0.5em;
-  --jte-mention-width: 0.75em;
+  --jte-mention-padding: 0.25em;
+  --jte-mention-width: 0.5em;
 
   --jte-popup-background: #fff;
   --jte-popup-font-size: 0.85em;
@@ -534,7 +676,63 @@ defineExpose({
 
 .juit-tiny-edit {
   display: flex;
+  flex-direction: column;
   align-items: stretch;
+
+  /* ===== EDITOR =========================================================== */
+
+  .-jte-toolbox {
+    display: none;
+    user-select: none;
+    position: relative;
+    height: 1.75em;
+    overflow: hidden;
+    margin-top: 0.75em;
+    padding: 0 0.25em 0 0.25em;
+
+    .-jte-editable & {
+      display: flex;
+    }
+
+    .-jte-icon {
+      width: 1em;
+      height: 1em;
+      border: 1px solid #ccc;
+      padding: 0.125em 0.25em;
+      margin: 0 0.25em;
+      border-radius: var(--jte-border-radius);
+      border: 1px solid var(--jte-border-color);
+      vertical-align: top;
+
+      &.-jte-disabled {
+        color: var(--jte-text-inactive);
+      }
+
+      &.-jte-active {
+        background-color: var(--jte-active-color);
+      }
+
+      &.-jte-icon-mention {
+        margin-left: 0.125em;
+      }
+
+      &:hover:not(.-jte-disabled):not(.-jte-active) {
+        background-color: var(--jte-shade);
+      }
+
+      &:active:not(.-jte-disabled) {
+        background-color: var(--jte-border-color);
+      }
+
+      &.-jte-icon-send {
+        margin-left: auto;
+        margin-right: 0.125em;
+        padding-left: 1em;
+        padding-right: 1em;
+      }
+    }
+
+  }
 
   /* ===== EDITOR =========================================================== */
 
@@ -542,8 +740,17 @@ defineExpose({
     width: 100%;
     box-sizing: border-box;
     padding: 0.25em;
+    border: 1px solid red;
+    white-space: pre-wrap;
 
-    mention {
+    .-jte-editable & {
+      padding-bottom: 2.5em;
+      margin-bottom: -2.5em;
+    }
+
+    /** Our mentions */
+    link[rel="mention"] {
+      display: inline;
       background-color: var(--jte-shade);
 
       border-width: 1px;
@@ -556,15 +763,22 @@ defineExpose({
 
       padding-right: var(--jte-mention-width);
       padding-left: var(--jte-mention-padding);
-      padding-bottom: 0.125em;
 
       cursor: default;
       user-select: none;
       font-weight: normal;
       font-style: normal;
       text-decoration: none;
+
+      font-size: 0.85em;
+
+      &:after {
+        content: attr(title);
+      }
     }
   }
+
+  /* ===== POPUPS =========================================================== */
 
   /** Popups basics */
   .-jte-mentions-popup, .-jte-links-popup {
@@ -677,33 +891,39 @@ defineExpose({
       border-radius: var(--jte-border-radius);
     }
 
-    label {
-      min-width: 2em;
-      padding-inline: 0;
-      border-top-right-radius: 0;
-      border-bottom-right-radius: 0;
+    .-jte-icon {
+      display: inline;
+      width: 1.25em;
+      height: 1.25em;
+      border: 1px solid #ccc;
+      padding: 0.125em 0.25em;
+      margin: 0.25em;
       margin-right: 0;
-      text-align: center;
-
+      border-radius: var(--jte-border-radius) 0 0 var(--jte-border-radius);
+      border: 1px solid var(--jte-border-color);
       background-color: var(--jte-shade);
+      vertical-align: top;
     }
 
     input {
       min-width: 12em;
+      min-height: 1.25em;
       border-top-left-radius: 0;
       border-bottom-left-radius: 0;
       margin-left: 0;
       border-left: 0;
     }
 
-    button {
-      min-width: 2em;
-      background-color: var(--jte-shade);
-      cursor: pointer;
-
-      &:hover {
-        background-color: var(--jte-border-color);
+    .-jte-error {
+      .-jte-icon, input {
+        background-color: #fee;
+        border-color: #933;
+        color: #933;
+        /* background-color: red; */
       }
+
+      /* border-color: red; */
+      /* color: red; */
     }
   }
 }
