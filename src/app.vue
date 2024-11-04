@@ -15,6 +15,7 @@
       :editable="editable"
       :mentions="mentions"
       @mention="mention = $event"
+      @submit="console.log('submitted', $event)"
     />
 
     <pre>{{

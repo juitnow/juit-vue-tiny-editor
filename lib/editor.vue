@@ -57,7 +57,7 @@
       <iconBold class="-jte-icon -jte-icon-bold" :class="iconClass(isBold, 'b')" @click="applyTag('b')" />
       <iconItalic class="-jte-icon -jte-icon-italic" :class="iconClass(isItalic, 'i')" @click="applyTag('i')" />
       <iconLink class="-jte-icon -jte-icon-href" :class="iconClass(isLink)" @click="applyTag('a', { href: 'http://__placeholder__/' })" />
-      <iconSend class="-jte-icon -jte-icon-send" :class="{ '-jte-disabled': !html, '-jte-active': !!html }" />
+      <iconSend class="-jte-icon -jte-icon-send" :class="{ '-jte-disabled': !html, '-jte-active': !!html }" @click="submit" />
     </div>
   </div>
 </template>
@@ -343,6 +343,11 @@ function selectWithOffsets(offsets: Offsets, collapse?: boolean): void {
   const editor = editorRef.value
   selected.value = restoreSelection(editor, offsets, collapse)
   editor.focus()
+}
+
+function submit(): void {
+  if (! html.value) return
+  emit('submit', html.value)
 }
 
 /* ==== DOM EVENTS ========================================================== */
@@ -687,6 +692,7 @@ onUnmounted(() => {
 
 const emit = defineEmits<{
   mention: [ string ],
+  submit: [ string ],
 }>()
 
 /* Watch our local refs and emit */
@@ -715,7 +721,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
   flex-direction: column;
   align-items: stretch;
 
-  /* ===== EDITOR =========================================================== */
+  /* ===== TOOLBAR ========================================================== */
 
   .-jte-toolbox {
     display: none;
@@ -954,11 +960,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
         background-color: #fee;
         border-color: #933;
         color: #933;
-        /* background-color: red; */
       }
-
-      /* border-color: red; */
-      /* color: red; */
     }
   }
 }
