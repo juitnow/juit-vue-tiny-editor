@@ -108,15 +108,15 @@ const props = defineProps({
 /* ==== REFS ================================================================ */
 
 /** Reference to our root container */
-const rootRef = ref<HTMLDivElement | null>(null)
+const rootRef = shallowRef<HTMLDivElement | null>(null)
 /** Reference to our content editable DIV */
-const editorRef = ref<HTMLDivElement | null>(null)
+const editorRef = shallowRef<HTMLDivElement | null>(null)
 /** Reference to our popup */
-const mentionsPopupRef = ref<HTMLDivElement | null>(null)
+const mentionsPopupRef = shallowRef<HTMLDivElement | null>(null)
 /** Reference to our mentions list (in the popup) DIV */
-const mentionsListRef = ref<HTMLDivElement | null>(null)
+const mentionsListRef = shallowRef<HTMLDivElement | null>(null)
 /** Reference to our links popup */
-const linksPopupRef = ref<HTMLDivElement | null>(null)
+const linksPopupRef = shallowRef<HTMLDivElement | null>(null)
 
 /** The `Range` of the current selection, if within our editor */
 const selected = shallowRef<Range & { backwards?: boolean } | null>(null)
@@ -155,7 +155,9 @@ const isLink = computed<Element | null>(() => selectedLink.value || activeLink.v
 watch(selectedLink, (link) => link && (previousLink.value = link))
 /** The text of the current link */
 const linkText = ref('')
+/** The href of the current link */
 const linkHref = ref('')
+/** Validate the link's own href (must be empty or an URL) */
 const linkValid = computed(() => {
   if (! linkHref.value) return true
   try {
@@ -165,24 +167,14 @@ const linkValid = computed(() => {
     return false
   }
 })
-
-watch(isLink, (link, oldLink) => {
-  linkText.value = link?.textContent || ''
-  linkHref.value = link?.getAttribute('href') || ''
-  if (linkHref.value === 'http://__placeholder__/') {
-    link?.setAttribute('href', '')
-    linkHref.value = ''
-  }
-  if ((link === null) && (oldLink !== null)) {
-    sanitize(editorRef.value!)
-  }
-})
+/** Update the content and href of the current link from the popup */
 watch([ linkText, linkHref ], ([ text, href ]) => {
   if (! isLink.value) return
   isLink.value.textContent = text
   isLink.value.setAttribute('href', href)
   commit()
 })
+
 
 /** Whether the current selection is all bold */
 const isBold = ref<Element | null>(null)
@@ -195,8 +187,9 @@ const dots = ref(0)
 const dotsString = computed(() => '.' + '.'.repeat(dots.value % 5))
 /** Interval animating our "waiting for mentions" text */
 let dotsInterval: ReturnType<typeof setInterval> | null = null
-
+/** The _next_ tag to wrap our input into (when enabling bold on collapsed) */
 const nextTag = ref('')
+/** When the selected range changes, reset the next tag */
 watch((selected), (newRange, oldRange) => {
   if (oldRange === null) return
   if (newRange === null) return
@@ -209,10 +202,12 @@ watch((selected), (newRange, oldRange) => {
   nextTag.value = ''
 })
 
+/** Our history (for undo) */
 const history: (Offsets & { content: string })[] = []
 
 /* ==== FUNCTIONS =========================================================== */
 
+/** Compute the class for an icon (bold or italic) */
 function iconClass(element: Element | null, tag?: string): string {
   if (! selected.value) return '-jte-disabled'
 
@@ -231,7 +226,6 @@ function iconClass(element: Element | null, tag?: string): string {
   return ''
 }
 
-
 /** Commit changes to the model converting our editor into HTML */
 function commit(): void {
   if (! editorRef.value) return void (html.value = '')
@@ -242,6 +236,7 @@ function commit(): void {
     string.replaceAll('&nbsp;', ' ').trimEnd() // remove trailing whitespace
 }
 
+/** Mark a new entry in our history */
 function historySave(): void {
   if (! editorRef.value) return
 
@@ -253,6 +248,7 @@ function historySave(): void {
   }
 }
 
+/** Undo the last change */
 function historyUndo(): void {
   if (! editorRef.value) return
   if (! selected.value) return
@@ -415,7 +411,12 @@ function onPaste(event: ClipboardEvent): void {
   if (! editorRef.value) return
   if (! selected.value) return
 
-  const text = event.clipboardData?.getData('text/html') || ''
+  const data = event.clipboardData
+  if (! data) return
+
+  const text = data.getData('text/html') || data.getData('text/plain')
+  if (! text) return
+
   const offsets = replaceRange(editorRef.value, selected.value, text)
 
   selectWithOffsets(offsets, true)
@@ -524,17 +525,21 @@ onMounted(() => {
   document.addEventListener('selectionchange', onSelectionChange)
 
   // References to our editor, popup, and list
+  if (! rootRef.value) throw new Error('Root not referenced')
   if (! editorRef.value) throw new Error('Editor not referenced')
   if (! mentionsPopupRef.value) throw new Error('Popup not referenced')
   if (! mentionsListRef.value) throw new Error('List not referenced')
   if (! linksPopupRef.value) throw new Error('Popup not referenced')
+  const root = rootRef.value
   const editor = editorRef.value
   const mentionsPopup = mentionsPopupRef.value
   const mentionsList = mentionsListRef.value
   const linksPopup = linksPopupRef.value
 
   /* On changes to the _local_ HTML, trigger an emit on our model value */
-  watch(html, (html) => model.value = html)
+  watch(html, (html) => {
+    if (html !== model.value) model.value = html // no changes, ignore!
+  })
 
   /* Watch our model, when the value is different from the local HTML, parse */
   watch(model, (model) => {
@@ -554,8 +559,23 @@ onMounted(() => {
   }, { immediate: true })
 
   /* Watch our links and update the popup */
-  watch([ isLink ], ([ link ]) => {
+  watch(isLink, (link) => {
+    // Always update (or reset?) the link text and href of a link
+    linkText.value = link?.textContent || ''
+    linkHref.value = link?.getAttribute('href') || ''
+
+    // If the link is a placeholder, consider this to be an empty link
+    if (linkHref.value === 'http://__placeholder__/') {
+      link?.setAttribute('href', '')
+      linkHref.value = ''
+    }
+
+    // If we are no longer editing a link, sanitize and hide the popup
     if (! link) {
+      const offsets = getSelectionOffsets(editor)
+      sanitize(editor)
+      if (offsets) restoreSelection(editor, offsets)
+
       linksPopup.style.display = 'none'
       linksPopup.style.top = '0'
       linksPopup.style.left = '0'
@@ -565,8 +585,9 @@ onMounted(() => {
     // Wait for the next tick to make sure the DOM is updated
     nextTick(() => {
       // Position and show the popup
-      linksPopup.style.display = 'block'
+      linksPopup.style.display = 'flex'
 
+      const rootRect = root.getBoundingClientRect()
       const rangeRect = link.getBoundingClientRect()
       const editorRect = editor.getBoundingClientRect()
 
@@ -574,16 +595,16 @@ onMounted(() => {
       const popupWidth = parseInt(popupStyle.width)
       const popupHeight = parseInt(popupStyle.height)
 
-      const fitsTop = rangeRect.top - popupHeight > editorRect.top
-      const fitsBottom = rangeRect.bottom + popupHeight < editorRect.bottom
+      const fitsTop = (rangeRect.top - popupHeight) - 6 > editorRect.top
+      const fitsBottom = (rangeRect.bottom + popupHeight + 3) < editorRect.bottom
       const fitsRight = rangeRect.left + popupWidth < editorRect.right
 
       linksPopup.style.top = (! fitsBottom && fitsTop) ?
-        `${rangeRect.top - popupHeight + window.scrollY - 3}px` :
-        `${rangeRect.bottom + window.scrollY + 3}px`
+        `${rangeRect.top - popupHeight - rootRect.top - 6}px` : // over the link
+        `${rangeRect.bottom - rootRect.top + 3}px` // below the link
       linksPopup.style.left = fitsRight ?
-        `${rangeRect.left + window.scrollX}px` :
-        `${editorRect.right - popupWidth - window.scrollX}px`
+        `${rangeRect.left - rootRect.left}px` : // right of the link
+        `${editorRect.right - popupWidth - rootRect.left}px` // aligned to the right of the editor
     })
   }, { immediate: true })
 
@@ -612,6 +633,7 @@ onMounted(() => {
       // Position and show the popup
       mentionsPopup.style.display = 'block'
 
+      const rootRect = root.getBoundingClientRect()
       const rangeRect = range.getBoundingClientRect()
       const editorRect = editor.getBoundingClientRect()
 
@@ -619,16 +641,16 @@ onMounted(() => {
       const popupWidth = parseInt(popupStyle.width)
       const popupHeight = parseInt(popupStyle.height)
 
-      const fitsTop = rangeRect.top - popupHeight > editorRect.top
-      const fitsBottom = rangeRect.bottom + popupHeight < editorRect.bottom
+      const fitsTop = (rangeRect.top - popupHeight) - 6 > editorRect.top
+      const fitsBottom = (rangeRect.bottom + popupHeight + 3) < editorRect.bottom
       const fitsRight = rangeRect.left + popupWidth < editorRect.right
 
       mentionsPopup.style.top = (! fitsBottom && fitsTop) ?
-        `${rangeRect.top - popupHeight + window.scrollY - 3}px` :
-        `${rangeRect.bottom + window.scrollY + 3}px`
+        `${rangeRect.top - popupHeight - rootRect.top - 6}px` : // over the link
+        `${rangeRect.bottom - rootRect.top + 3}px` // below the link
       mentionsPopup.style.left = fitsRight ?
-        `${rangeRect.left + window.scrollX}px` :
-        `${editorRect.right - popupWidth - window.scrollX}px`
+        `${rangeRect.left - rootRect.left}px` : // right of the link
+        `${editorRect.right - popupWidth - rootRect.left}px` // aligned to the right of the editor
 
       // Scroll the list to make sure the selected item is visible
       const item = mentionsList.querySelectorAll('li')[mentionsIndex.value]
@@ -720,6 +742,8 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  position: relative;
+  box-sizing: content-box;
 
   /* ===== TOOLBAR ========================================================== */
 
@@ -920,39 +944,44 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
   .-jte-links-popup {
     user-select: none;
     padding: 0.125em;
+    width: 20em;
+    flex-direction: column;
 
-    label, input, button {
-      display: inline-block;
-      margin: 0.25em;
-      padding: 0.125em 0.5em;
-      font-size: 1em;
-      border-width: 1px;
-      border-style: solid;
-      border-color: var(--jte-border-color);
-      border-radius: var(--jte-border-radius);
+    div {
+      display: flex;
+      flex-direction: row;
     }
 
     .-jte-icon {
-      display: inline;
+      position: absolute;
+      display: inline-block;
+
       width: 1.25em;
       height: 1.25em;
-      border: 1px solid #ccc;
       padding: 0.125em 0.25em;
       margin: 0.25em;
-      margin-right: 0;
-      border-radius: var(--jte-border-radius) 0 0 var(--jte-border-radius);
+
       border: 1px solid var(--jte-border-color);
+      border-radius: var(--jte-border-radius) 0 0 var(--jte-border-radius);
       background-color: var(--jte-shade);
-      vertical-align: top;
+
+      z-index: 1;
     }
 
     input {
-      min-width: 12em;
-      min-height: 1.25em;
-      border-top-left-radius: 0;
-      border-bottom-left-radius: 0;
-      margin-left: 0;
-      border-left: 0;
+      display: inline-block;
+      flex-grow: 1;
+
+      height: 1.25em;
+      margin: 0.25em;
+      padding: 0.125em 0.5em;
+
+      border: 1px solid var(--jte-border-color);
+      border-radius: var(--jte-border-radius);
+      background-color: transparent;
+      padding-left: 2.25em;
+
+      z-index: 2;
     }
 
     .-jte-error {
