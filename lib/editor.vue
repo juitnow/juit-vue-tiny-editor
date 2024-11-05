@@ -744,6 +744,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
   align-items: stretch;
   position: relative;
   box-sizing: content-box;
+  border-radius: var(--jte-border-radius);
 
   /* ===== TOOLBAR ========================================================== */
 
