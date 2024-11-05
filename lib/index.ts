@@ -1,2 +1,2 @@
-import Editor from './editor.vue'
-export { Editor }
+import TinyEdit from './editor.vue'
+export default TinyEdit

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { Editor } from '../lib/index'
+import TinyEdit from '../lib/index'
 
 describe('Editor', () => {
   it('should expose a Vue component', () => {
-    expect(Editor).toBeDefined()
-    expect(Editor.props).toBeDefined()
-    expect(Editor.emits).toBeDefined()
-    expect(Editor.setup).toBeDefined()
+    expect(TinyEdit).toBeDefined()
+    expect(TinyEdit.props).toBeDefined()
+    expect(TinyEdit.emits).toBeDefined()
+    expect(TinyEdit.setup).toBeDefined()
   })
 })
