@@ -902,10 +902,6 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       margin-top: 0.75em;
       padding: 0 0.25em 0 0.25em;
 
-      .-jte-editable & {
-        display: flex;
-      }
-
       .-jte-icon {
         width: 1em;
         height: 1em;
@@ -972,11 +968,6 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       box-sizing: border-box;
       padding: 0.25em;
       white-space: pre-wrap;
-
-      .-jte-editable & {
-        padding-bottom: 2.5em;
-        margin-bottom: -2.5em;
-      }
 
       border-radius: var(--jte-border-radius);
       border: 1px solid var(--jte-border);
@@ -1187,6 +1178,19 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
           color: var(--jte-error);
         }
       }
+    }
+  }
+
+  /* ===== TOOLBOX VISIBLE ONLY ON EDITABLE ================================= */
+
+  &.-jte-editable {
+    .-jte-editor {
+      padding-bottom: 2.5em;
+      margin-bottom: -2.5em;
+    }
+
+    .-jte-toolbox {
+      display: flex;
     }
   }
 }
