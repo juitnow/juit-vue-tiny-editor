@@ -11,7 +11,7 @@ export default defineConfig((env) => {
       rollupTypes: true,
     }) ],
     build: {
-      minify: false,
+      minify: true,
       sourcemap: true,
       outDir: demo ? 'demo' : 'dist',
       copyPublicDir: demo,
