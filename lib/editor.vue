@@ -41,6 +41,10 @@
         </div>
       </div>
 
+      <div v-if="placeholder && (! html)" class="-jte-placeholder">
+        {{ placeholder }}
+      </div>
+
       <!-- our editor -->
       <div
         ref="editorRef"
@@ -106,6 +110,13 @@ const props = defineProps({
     required: false,
     default: false,
   },
+  /** A placeholder for when no text is available */
+  placeholder: {
+    type: String,
+    required: false,
+    default: '',
+  },
+  /** A list of mentions to be used in the editor */
   mentions: {
     type: Object as PropType<Record<string, string> | null>,
     required: false,
@@ -826,7 +837,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
 
 .juit-tiny-edit {
 
-  /* ===== APPLY DARK THEME =================================================== */
+  /* ===== APPLY DARK THEME ================================================= */
 
   &.-jte-dark .-jte-root {
     /* main colors */
@@ -882,7 +893,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
     border-radius: var(--jte-border-radius);
     border: 1px solid var(--jte-border);
 
-    /* ===== TOOLBAR ========================================================== */
+    /* ===== TOOLBAR ======================================================== */
 
     .-jte-toolbox {
       display: none;
@@ -946,7 +957,17 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       }
     }
 
-    /* ===== EDITOR =========================================================== */
+    /* ===== PLACEHOLDER ==================================================== */
+
+    .-jte-placeholder {
+      position: absolute;
+      font-style: italic;
+      padding: 0.25em;
+      pointer-events: none;
+      color: var(--jte-inactive);
+    }
+
+    /* ===== EDITOR ========================================================= */
 
     .-jte-editor {
       width: 100%;
@@ -1002,7 +1023,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       }
     }
 
-    /* ===== POPUPS =========================================================== */
+    /* ===== POPUPS ========================================================= */
 
     /** Popups basics */
     .-jte-mentions-popup, .-jte-links-popup {
@@ -1016,7 +1037,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       border: 1px solid var(--jte-border);
     }
 
-    /* ===== MENTIONS POPUP =================================================== */
+    /* ===== MENTIONS POPUP ================================================= */
 
     /** Our mentions popup */
     .-jte-mentions-popup {
@@ -1096,7 +1117,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       }
     }
 
-    /* ===== LINKS POPUP ====================================================== */
+    /* ===== LINKS POPUP ==================================================== */
 
     .-jte-links-popup {
       user-select: none;

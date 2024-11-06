@@ -21,6 +21,7 @@
       ref="editor"
       v-model="html"
       class="tiny-edit"
+      placeholder="Type something..."
       :editable="editable"
       :mentions="mentions"
       :dark="dark"
