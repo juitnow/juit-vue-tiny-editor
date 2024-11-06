@@ -1,63 +1,65 @@
 <template>
-  <div ref="rootRef" class="juit-tiny-edit" :class="{ '-jte-editable': editable, '-jte-dark': dark }">
-    <!-- our mentions popup -->
-    <div ref="mentionsPopupRef" class="-jte-mentions-popup">
-      <ul ref="mentionsListRef">
-        <li
-          v-for="(mention, i) in mentionsEntries"
-          :key="i"
-          :class="{ '-jte-mentions-selected': mentionsIndex === i }"
-          @mousedown="applyMention(mention.name, mention.value)"
-        >
-          <div class="-jte-mentions-entry">
-            {{ mention.value }}
-            <span class="-jte-mentions-ref">{{ mention.name }}</span>
-          </div>
-        </li>
-      </ul>
-      <div v-if="! mentionsReady" class="-jte-mentions-waiting">
-        {{ mentionsText }}{{ dotsString }}
+  <div class="juit-tiny-edit" :class="{ '-jte-editable': editable, '-jte-dark': dark }">
+    <div ref="rootRef" class="-jte-root">
+      <!-- our mentions popup -->
+      <div ref="mentionsPopupRef" class="-jte-mentions-popup">
+        <ul ref="mentionsListRef">
+          <li
+            v-for="(mention, i) in mentionsEntries"
+            :key="i"
+            :class="{ '-jte-mentions-selected': mentionsIndex === i }"
+            @mousedown="applyMention(mention.name, mention.value)"
+          >
+            <div class="-jte-mentions-entry">
+              {{ mention.value }}
+              <span class="-jte-mentions-ref">{{ mention.name }}</span>
+            </div>
+          </li>
+        </ul>
+        <div v-if="! mentionsReady" class="-jte-mentions-waiting">
+          {{ mentionsText }}{{ dotsString }}
+        </div>
+        <div v-else-if="! mentionsEntries.length" class="-jte-mentions-none">
+          {{ mentionsText }}
+        </div>
       </div>
-      <div v-else-if="! mentionsEntries.length" class="-jte-mentions-none">
-        {{ mentionsText }}
-      </div>
-    </div>
 
-    <!-- our links popup -->
-    <div
-      ref="linksPopupRef"
-      class="-jte-links-popup"
-      @click="activeLink = previousLink"
-      @focusin="activeLink = previousLink"
-    >
-      <div>
-        <iconText class="-jte-icon" />
-        <input v-model="linkText" type="text">
+      <!-- our links popup -->
+      <div
+        ref="linksPopupRef"
+        class="-jte-links-popup"
+        @click="activeLink = previousLink"
+        @focusin="activeLink = previousLink"
+      >
+        <div>
+          <iconText class="-jte-icon" />
+          <input v-model="linkText" type="text">
+        </div>
+        <div :class="{ '-jte-error': !linkValid }">
+          <iconLink class="-jte-icon" />
+          <input v-model="linkHref" type="text">
+        </div>
       </div>
-      <div :class="{ '-jte-error': !linkValid }">
-        <iconLink class="-jte-icon" />
-        <input v-model="linkHref" type="text">
+
+      <!-- our editor -->
+      <div
+        ref="editorRef"
+        class="-jte-editor"
+        :contenteditable="editable ? 'plaintext-only' : 'false'"
+        @beforeinput="onBeforeInput($event as InputEvent)"
+        @input="onInput($event as InputEvent)"
+        @keydown="onKeydown($event)"
+        @paste="onPaste($event)"
+        @focusin="activeLink = null"
+      />
+
+      <div class="-jte-toolbox">
+        <iconMention class="-jte-icon -jte-icon-mention" :class="{ '-jte-disabled': ! selected?.collapsed }" @click="insertMention" />
+        <iconBold class="-jte-icon -jte-icon-bold" :class="iconClass(isBold, 'b')" @click="applyTag('b')" />
+        <iconItalic class="-jte-icon -jte-icon-italic" :class="iconClass(isItalic, 'i')" @click="applyTag('i')" />
+        <iconLink class="-jte-icon -jte-icon-href" :class="iconClass(isLink)" @click="applyTag('a', { href: 'http://__placeholder__/' })" />
+        <iconSend class="-jte-icon -jte-icon-send" :class="{ '-jte-disabled': !html, '-jte-active': !!html }" @click="submit" />
       </div>
-    </div>
-
-    <!-- our editor -->
-    <div
-      ref="editorRef"
-      class="-jte-editor"
-      :contenteditable="editable ? 'plaintext-only' : 'false'"
-      @beforeinput="onBeforeInput($event as InputEvent)"
-      @input="onInput($event as InputEvent)"
-      @keydown="onKeydown($event)"
-      @paste="onPaste($event)"
-      @focusin="activeLink = null"
-    />
-
-    <div class="-jte-toolbox">
-      <iconMention class="-jte-icon -jte-icon-mention" :class="{ '-jte-disabled': ! selected?.collapsed }" @click="insertMention" />
-      <iconBold class="-jte-icon -jte-icon-bold" :class="iconClass(isBold, 'b')" @click="applyTag('b')" />
-      <iconItalic class="-jte-icon -jte-icon-italic" :class="iconClass(isItalic, 'i')" @click="applyTag('i')" />
-      <iconLink class="-jte-icon -jte-icon-href" :class="iconClass(isLink)" @click="applyTag('a', { href: 'http://__placeholder__/' })" />
-      <iconSend class="-jte-icon -jte-icon-send" :class="{ '-jte-disabled': !html, '-jte-active': !!html }" @click="submit" />
     </div>
   </div>
 </template>
@@ -746,7 +748,6 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
   --jte-popup: #fff;
   --jte-link: #009;
   --jte-error: #933;
-  --jte-input: transparent;
 
   /* derived colors */
   --jte-inactive: color-mix(in srgb, var(--jte-text) 50%, transparent);
@@ -770,6 +771,12 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
   --jte-button-disabled-text: var(--jte-inactive);
   --jte-button-disabled-border: var(--jte-border);
   --jte-button-disabled-background: var(--jte-shade);
+
+  /* inputs within popup */
+  --jte-input-text: var(--jte-text);
+  --jte-input-background: transparent;
+  --jte-input-border: var(--jte-border);
+  --jte-input-shade: var(--jte-shade);
 
   /* ===== DARK THEME ======================================================= */
 
@@ -805,328 +812,347 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
   --jte-dark-button-disabled-text: var(--jte-dark-inactive);
   --jte-dark-button-disabled-border: var(--jte-dark-border);
   --jte-dark-button-disabled-background: var(--jte-dark-shade);
+
+  /* inputs within popup */
+  --jte-dark-input-text: var(--jte-dark-text);
+  --jte-dark-input-background: transparent;
+  --jte-dark-input-border: var(--jte-dark-border);
+  --jte-dark-input-shade: var(--jte-dark-shade);
 }
 
-/* ===== APPLY DARK THEME =================================================== */
-
-.juit-tiny-edit.-jte-dark {
-  /* main colors */
-  --jte-text: var(--jte-dark-text);
-  --jte-background: var(--jte-dark-background);
-  --jte-active: var(--jte-dark-active);
-  --jte-mention: var(--jte-dark-mention);
-  --jte-popup: var(--jte-dark-popup);
-  --jte-link: var(--jte-dark-link);
-  --jte-error: var(--jte-dark-error);
-
-  /* derived colors */
-  --jte-inactive: var(--jte-dark-inactive);
-  --jte-border: var(--jte-dark-border);
-  --jte-shade: var(--jte-dark-shade);
-  --jte-active-shade: var(--jte-dark-active-shade);
-
-  /* button colors */
-  --jte-button-text: var(--jte-dark-button-text);
-  --jte-button-border: var(--jte-dark-button-border);
-  --jte-button-background: var(--jte-dark-button-background);
-
-  --jte-button-hovered-text: var(--jte-dark-button-hovered-text);
-  --jte-button-hovered-border: var(--jte-dark-button-hovered-border);
-  --jte-button-hovered-background: var(--jte-dark-button-hovered-background);
-
-  --jte-button-active-text: var(--jte-dark-button-active-text);
-  --jte-button-active-border: var(--jte-dark-button-active-border);
-  --jte-button-active-background: var(--jte-dark-button-active-background);
-
-  --jte-button-disabled-text: var(--jte-dark-button-disabled-text);
-  --jte-button-disabled-border: var(--jte-dark-button-disabled-border);
-  --jte-button-disabled-background: var(--jte-dark-button-disabled-background);
-}
-
-/* ===== STYLE OUR EDITOR =================================================== */
+/* ========================================================================== *
+ * EDITOR STYLING                                                             *
+ * ========================================================================== */
 
 .juit-tiny-edit {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  position: relative;
-  box-sizing: content-box;
 
-  color: var(--jte-text);
-  background-color: var(--jte-background);
-  border-radius: var(--jte-border-radius);
-  border: 1px solid var(--jte-border);
+  /* ===== APPLY DARK THEME =================================================== */
 
-  /* ===== TOOLBAR ========================================================== */
+  &.-jte-dark .-jte-root {
+    /* main colors */
+    --jte-text: var(--jte-dark-text);
+    --jte-background: var(--jte-dark-background);
+    --jte-active: var(--jte-dark-active);
+    --jte-mention: var(--jte-dark-mention);
+    --jte-popup: var(--jte-dark-popup);
+    --jte-link: var(--jte-dark-link);
+    --jte-error: var(--jte-dark-error);
 
-  .-jte-toolbox {
-    display: none;
-    user-select: none;
+    /* derived colors */
+    --jte-inactive: var(--jte-dark-inactive);
+    --jte-border: var(--jte-dark-border);
+    --jte-shade: var(--jte-dark-shade);
+    --jte-active-shade: var(--jte-dark-active-shade);
+
+    /* button colors */
+    --jte-button-text: var(--jte-dark-button-text);
+    --jte-button-border: var(--jte-dark-button-border);
+    --jte-button-background: var(--jte-dark-button-background);
+
+    --jte-button-hovered-text: var(--jte-dark-button-hovered-text);
+    --jte-button-hovered-border: var(--jte-dark-button-hovered-border);
+    --jte-button-hovered-background: var(--jte-dark-button-hovered-background);
+
+    --jte-button-active-text: var(--jte-dark-button-active-text);
+    --jte-button-active-border: var(--jte-dark-button-active-border);
+    --jte-button-active-background: var(--jte-dark-button-active-background);
+
+    --jte-button-disabled-text: var(--jte-dark-button-disabled-text);
+    --jte-button-disabled-border: var(--jte-dark-button-disabled-border);
+    --jte-button-disabled-background: var(--jte-dark-button-disabled-background);
+
+    /* inputs within popup */
+    --jte-input-text: var(--jte-dark-input-text);
+    --jte-input-background: var(--jte-dark-input-background);
+    --jte-input-border: var(--jte-dark-input-border);
+    --jte-input-shade: var(--jte-dark-input-shade);
+  }
+
+  /* ===== STYLE OUR EDITOR ================================================= */
+
+  .-jte-root {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     position: relative;
-    height: 1.75em;
-    overflow: hidden;
-    margin-top: 0.75em;
-    padding: 0 0.25em 0 0.25em;
+    box-sizing: content-box;
 
-    .-jte-editable & {
-      display: flex;
-    }
-
-    .-jte-icon {
-      width: 1em;
-      height: 1em;
-      padding: 0.125em 0.25em;
-      margin: 0 0.25em;
-      vertical-align: top;
-
-      color: var(--jte-button-text);
-      background-color: var(--jte-button-background);
-      border: 1px solid var(--jte-button-border);
-      border-radius: var(--jte-border-radius);
-
-      &.-jte-icon-mention {
-        margin-left: 0.125em;
-      }
-
-      &.-jte-icon-send {
-        margin-left: auto;
-        margin-right: 0.125em;
-        padding-left: 1em;
-        padding-right: 1em;
-      }
-
-      &.-jte-disabled {
-        color: var(--jte-button-disabled-text);
-        border-color: var(--jte-button-disabled-border);
-        background-color: var(--jte-button-disabled-background);
-      }
-
-      &.-jte-active {
-        color: var(--jte-button-active-text);
-        border-color: var(--jte-button-active-border);
-        background-color: var(--jte-button-active-background);
-      }
-
-      &:active:not(.-jte-disabled) {
-        color: var(--jte-button-active-text);
-        border-color: var(--jte-button-active-border);
-        background-color: var(--jte-button-active-background);
-      }
-
-      &:hover:not(.-jte-disabled):not(.-jte-active):not(:active) {
-        color: var(--jte-button-hovered-text);
-        border-color: var(--jte-button-hovered-border);
-        background-color: var(--jte-button-hovered-background);
-      }
-    }
-  }
-
-  /* ===== EDITOR =========================================================== */
-
-  .-jte-editor {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0.25em;
-    white-space: pre-wrap;
-
-    .-jte-editable & {
-      padding-bottom: 2.5em;
-      margin-bottom: -2.5em;
-    }
-
-    /** Links */
-    a {
-      color: var(--jte-link);
-    }
-
-    /** Our mentions */
-    link[rel="mention"] {
-      display: inline-block;
-      background-color: var(--jte-shade);
-
-      border-width: 1px;
-      border-style: solid;
-      border-color: var(--jte-border);
-      border-radius: var(--jte-border-radius);
-      margin-top: calc(0.15em - 1px);
-
-      vertical-align: top;
-
-      cursor: default;
-      user-select: none;
-      font-weight: normal;
-      font-style: normal;
-      text-decoration: none;
-
-      font-size: 0.85em;
-      overflow: hidden;
-
-      &:before {
-        display: inline-block;
-        content: '\200B'; /* zero width space */
-        background-color: var(--jte-mention);
-        width: 0.5em;
-      }
-
-      &:after {
-        display: inline-block;
-        content: attr(title);
-        margin-left: 0.25em;
-        margin-right: 0.5em;
-      }
-    }
-  }
-
-  /* ===== POPUPS =========================================================== */
-
-  /** Popups basics */
-  .-jte-mentions-popup, .-jte-links-popup {
-    display: none;
-    position: absolute;
-    z-index: 1000;
-
-    font-size: 0.85em;
-    background-color: var(--jte-popup);
+    color: var(--jte-text);
+    background-color: var(--jte-background);
     border-radius: var(--jte-border-radius);
     border: 1px solid var(--jte-border);
-  }
 
-  /* ===== MENTIONS POPUP =================================================== */
+    /* ===== TOOLBAR ========================================================== */
 
-  /** Our mentions popup */
-  .-jte-mentions-popup {
-    overflow: hidden;
-    cursor: pointer;
-    min-width: 8em;
+    .-jte-toolbox {
+      display: none;
+      user-select: none;
+      position: relative;
+      height: 1.75em;
+      overflow: hidden;
+      margin-top: 0.75em;
+      padding: 0 0.25em 0 0.25em;
 
-    /** Our list of mentions */
-    ul {
-      overflow: scroll;
-      max-height: calc(7.5em + 3px);
-      white-space: nowrap;
-      margin: 0;
-      padding: 0;
+      .-jte-editable & {
+        display: flex;
+      }
+
+      .-jte-icon {
+        width: 1em;
+        height: 1em;
+        padding: 0.125em 0.25em;
+        margin: 0 0.25em;
+        vertical-align: top;
+
+        color: var(--jte-button-text);
+        background-color: var(--jte-button-background);
+        border: 1px solid var(--jte-button-border);
+        border-radius: var(--jte-border-radius);
+
+        &.-jte-icon-mention {
+          margin-left: 0.125em;
+        }
+
+        &.-jte-icon-send {
+          margin-left: auto;
+          margin-right: 0.125em;
+          padding-left: 1em;
+          padding-right: 1em;
+        }
+
+        &.-jte-disabled {
+          color: var(--jte-button-disabled-text);
+          border-color: var(--jte-button-disabled-border);
+          background-color: var(--jte-button-disabled-background);
+        }
+
+        &.-jte-active {
+          color: var(--jte-button-active-text);
+          border-color: var(--jte-button-active-border);
+          background-color: var(--jte-button-active-background);
+        }
+
+        &:active:not(.-jte-disabled) {
+          color: var(--jte-button-active-text);
+          border-color: var(--jte-button-active-border);
+          background-color: var(--jte-button-active-background);
+        }
+
+        &:hover:not(.-jte-disabled):not(.-jte-active):not(:active) {
+          color: var(--jte-button-hovered-text);
+          border-color: var(--jte-button-hovered-border);
+          background-color: var(--jte-button-hovered-background);
+        }
+      }
     }
 
-    /** Each mention entry */
-    li {
-      list-style-type: none;
-      border-top: 1px solid transparent;
-      border-bottom: 1px solid transparent;
-      color: var(--jte-inactive);
+    /* ===== EDITOR =========================================================== */
 
-      /** Inside of our mentions entry */
-      .-jte-mentions-entry {
-        padding-block: 0.125em;
-        padding-left: 0.25em;
-        padding-right: 1.5em;
+    .-jte-editor {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.25em;
+      white-space: pre-wrap;
+
+      .-jte-editable & {
+        padding-bottom: 2.5em;
+        margin-bottom: -2.5em;
+      }
+
+      /** Links */
+      a {
+        color: var(--jte-link);
+      }
+
+      /** Our mentions */
+      link[rel="mention"] {
+        display: inline-block;
+        background-color: var(--jte-shade);
+
+        border-width: 1px;
+        border-style: solid;
+        border-color: var(--jte-border);
+        border-radius: var(--jte-border-radius);
+        margin-top: calc(0.15em - 1px);
+
+        vertical-align: top;
+
+        cursor: default;
+        user-select: none;
+        font-weight: normal;
+        font-style: normal;
+        text-decoration: none;
+
+        font-size: 0.85em;
+        overflow: hidden;
+
+        &:before {
+          display: inline-block;
+          content: '\200B'; /* zero width space */
+          background-color: var(--jte-mention);
+          width: 0.5em;
+        }
+
+        &:after {
+          display: inline-block;
+          content: attr(title);
+          margin-left: 0.25em;
+          margin-right: 0.5em;
+        }
+      }
+    }
+
+    /* ===== POPUPS =========================================================== */
+
+    /** Popups basics */
+    .-jte-mentions-popup, .-jte-links-popup {
+      display: none;
+      position: absolute;
+      z-index: 1000;
+
+      font-size: 0.85em;
+      background-color: var(--jte-popup);
+      border-radius: var(--jte-border-radius);
+      border: 1px solid var(--jte-border);
+    }
+
+    /* ===== MENTIONS POPUP =================================================== */
+
+    /** Our mentions popup */
+    .-jte-mentions-popup {
+      overflow: hidden;
+      cursor: pointer;
+      min-width: 8em;
+
+      /** Our list of mentions */
+      ul {
+        overflow: scroll;
+        max-height: calc(7.5em + 3px);
+        white-space: nowrap;
+        margin: 0;
+        padding: 0;
+      }
+
+      /** Each mention entry */
+      li {
+        list-style-type: none;
+        border-top: 1px solid transparent;
+        border-bottom: 1px solid transparent;
+        color: var(--jte-inactive);
+
+        /** Inside of our mentions entry */
+        .-jte-mentions-entry {
+          padding-block: 0.125em;
+          padding-left: 0.25em;
+          padding-right: 1.5em;
+          border-left-width: 0.5em;
+          border-left-style: solid;
+          border-left-color: transparent;
+
+          /** Refs want a smaller font */
+          .-jte-mentions-ref {
+            margin-left: 0.5em;
+            font-size: 0.85em;
+            font-style: italic;
+          }
+        }
+
+        /** Selected list item */
+        &.-jte-mentions-selected {
+          color: var(--jte-input-text);
+          background-color: var(--jte-input-background);
+          border-color: var(--jte-input-border);
+
+          /** Apply our "tag" to the slected mention */
+          .-jte-mentions-entry {
+            border-color: var(--jte-mention);
+          }
+        }
+
+        /** No borders for first and last item */
+        &:first-child { border-top: none; }
+        &:last-child { border-bottom: none; }
+      }
+
+      /** Basic style for waiting / no item found */
+      .-jte-mentions-waiting, .-jte-mentions-none {
+        font-size: 0.85em;
+        color: var(--jte-inactive);
         border-left-width: 0.5em;
         border-left-style: solid;
-        border-left-color: transparent;
-
-        /** Refs want a smaller font */
-        .-jte-mentions-ref {
-          margin-left: 0.5em;
-          font-size: 0.85em;
-          font-style: italic;
-        }
+        border-color: transparent;
+        padding-block: 0.125em;
+        padding-inline: 0.25em;
       }
 
-      /** Selected list item */
-      &.-jte-mentions-selected {
-        color: var(--jte-text);
-        background-color: var(--jte-shade);
-        border-color: var(--jte-border);
-
-        /** Apply our "tag" to the slected mention */
-        .-jte-mentions-entry {
-          border-color: var(--jte-mention);
-        }
+      /** Waiting is in italic */
+      .-jte-mentions-waiting {
+        font-style: italic;
       }
 
-      /** No borders for first and last item */
-      &:first-child { border-top: none; }
-      &:last-child { border-bottom: none; }
+      /** None has a grey tab */
+      .-jte-mentions-none {
+        border-color: var(--jte-shade);
+      }
     }
 
-    /** Basic style for waiting / no item found */
-    .-jte-mentions-waiting, .-jte-mentions-none {
-      font-size: 0.85em;
-      color: var(--jte-inactive);
-      border-left-width: 0.5em;
-      border-left-style: solid;
-      border-color: transparent;
-      padding-block: 0.125em;
-      padding-inline: 0.25em;
-    }
+    /* ===== LINKS POPUP ====================================================== */
 
-    /** Waiting is in italic */
-    .-jte-mentions-waiting {
-      font-style: italic;
-    }
+    .-jte-links-popup {
+      user-select: none;
+      padding: 0.125em;
+      width: 20em;
+      flex-direction: column;
 
-    /** None has a grey tab */
-    .-jte-mentions-none {
-      border-color: var(--jte-shade);
-    }
-  }
+      div {
+        display: flex;
+        flex-direction: row;
+        margin: 0.25em;
+        position: relative;
+        background-color: var(--jte-input-background);
+        border-radius: var(--jte-border-radius);
+      }
 
-  /* ===== LINKS POPUP ====================================================== */
+      .-jte-icon {
+        display: block;
+        position: absolute;
 
-  .-jte-links-popup {
-    user-select: none;
-    padding: 0.125em;
-    width: 20em;
-    flex-direction: column;
+        top: 1px;
+        left: 1px;
 
-    div {
-      display: flex;
-      flex-direction: row;
-      margin: 0.25em;
-      position: relative;
-      background-color: var(--jte-input);
-      border-radius: var(--jte-border-radius);
-    }
+        width: 1.25em;
+        height: 1.25em;
+        padding: 0.125em 0.25em;
+        margin: 0;
 
-    .-jte-icon {
-      display: block;
-      position: absolute;
+        color: var(--jte-input-text);
+        background-color: var(--jte-input-shade);
+        border: none;
+        border-radius: calc(var(--jte-border-radius) - 1px);
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        border-right: 1px solid var(--jte-input-border);
+      }
 
-      top: 1px;
-      left: 1px;
+      input {
+        display: block;
+        flex-grow: 1;
 
-      width: 1.25em;
-      height: 1.25em;
-      padding: 0.125em 0.25em;
-      margin: 0;
+        font-size: 1em;
+        height: 1.25em;
+        padding: 0.125em 0.25em 0.125em 2.25em;
+        margin: 0;
 
-      color: var(--jte-button-text);
-      background-color: var(--jte-button-hovered-background);
-      border: none;
-      border-radius: calc(var(--jte-border-radius) - 1px);
-      border-top-right-radius: 0;
-      border-bottom-right-radius: 0;
-      border-right: 1px solid var(--jte-button-hovered-border);
-    }
+        color: var(--jte-input-text);
+        border: 1px solid var(--jte-input-border);
+        border-radius: var(--jte-border-radius);
+        background-color: transparent;
+      }
 
-    input {
-      display: block;
-      flex-grow: 1;
-
-      font-size: 1em;
-      height: 1.25em;
-      padding: 0.125em 0.25em 0.125em 2.25em;
-      margin: 0;
-
-      color: var(--jte-text);
-      border: 1px solid var(--jte-button-hovered-border);
-      border-radius: var(--jte-border-radius);
-      background-color: transparent;
-    }
-
-    .-jte-error {
-      .-jte-icon, input {
-        color: var(--jte-error);
+      .-jte-error {
+        .-jte-icon, input {
+          color: var(--jte-error);
+        }
       }
     }
   }
