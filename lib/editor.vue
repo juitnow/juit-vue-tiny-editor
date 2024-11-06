@@ -796,7 +796,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
   --jte-dark-background: transparent;
   --jte-dark-active: #99f;
   --jte-dark-mention: #669;
-  --jte-dark-popup: #000;
+  --jte-dark-popup: #111;
   --jte-dark-link: #99f;
   --jte-dark-error: #f99;
   --jte-dark-input: transparent;
@@ -890,8 +890,6 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
 
     color: var(--jte-text);
     background-color: var(--jte-background);
-    border-radius: var(--jte-border-radius);
-    border: 1px solid var(--jte-border);
 
     /* ===== TOOLBAR ======================================================== */
 
@@ -980,23 +978,22 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
         margin-bottom: -2.5em;
       }
 
+      border-radius: var(--jte-border-radius);
+      border: 1px solid var(--jte-border);
+
+      &:focus {
+        outline: 1px solid var(--jte-active);
+        border: 1px solid var(--jte-active);
+      }
+
       /** Links */
       a {
         color: var(--jte-link);
       }
 
-      /** Our mentions */
+      /** Our mentions (this needs to be "inline" for contenteditable to work) */
       link[rel="mention"] {
-        display: inline-block;
-        background-color: var(--jte-shade);
-
-        border-width: 1px;
-        border-style: solid;
-        border-color: var(--jte-border);
-        border-radius: var(--jte-border-radius);
-        margin-top: calc(0.15em - 1px);
-
-        vertical-align: top;
+        display: inline;
 
         cursor: default;
         user-select: none;
@@ -1008,17 +1005,27 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
         overflow: hidden;
 
         &:before {
-          display: inline-block;
-          content: '\200B'; /* zero width space */
+          padding: 0 0.25em;
+          content: '\200b'; /* zero width space */
+
           background-color: var(--jte-mention);
-          width: 0.5em;
+          border: 1px solid var(--jte-border);
+          border-radius: var(--jte-border-radius);
+          border-right: none;
+          border-top-right-radius: 0;
+          border-bottom-right-radius: 0;
         }
 
         &:after {
-          display: inline-block;
           content: attr(title);
-          margin-left: 0.25em;
-          margin-right: 0.5em;
+          padding: 0 0.5em 0 0.25em;
+
+          background-color: var(--jte-shade);
+          border: 1px solid var(--jte-border);
+          border-radius: var(--jte-border-radius);
+          border-left: none;
+          border-top-left-radius: 0;
+          border-bottom-left-radius: 0;
         }
       }
     }
@@ -1081,7 +1088,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
         /** Selected list item */
         &.-jte-mentions-selected {
           color: var(--jte-input-text);
-          background-color: var(--jte-input-background);
+          background-color: var(--jte-shade);
           border-color: var(--jte-input-border);
 
           /** Apply our "tag" to the slected mention */
@@ -1152,7 +1159,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
         border-radius: calc(var(--jte-border-radius) - 1px);
         border-top-right-radius: 0;
         border-bottom-right-radius: 0;
-        border-right: 1px solid var(--jte-input-border);
+        border-right: none;
       }
 
       input {
@@ -1168,6 +1175,11 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
         border: 1px solid var(--jte-input-border);
         border-radius: var(--jte-border-radius);
         background-color: transparent;
+
+        &:focus {
+          outline: 1px solid var(--jte-active);
+          border: 1px solid var(--jte-active);
+        }
       }
 
       .-jte-error {
