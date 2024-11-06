@@ -11,10 +11,8 @@
   },
   "scripts": {
     "build": "npm run check && vite build",
-    "build-demo": "npm run check && vite build --mode=demo",
+    "build-demo": "npm run check && vite build -c vite.config.demo.ts",
     "check": "vue-tsc --build --force && vitest run --coverage && eslint",
-    "deploy-dev": "wrangler deploy",
-    "deploy-prod": "wrangler deploy --env=production",
     "dev": "vite",
     "test": "vitest"
   },
