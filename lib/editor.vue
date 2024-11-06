@@ -89,7 +89,7 @@ import type { Offsets } from './range'
 
 /* ==== DEFS ================================================================ */
 
-defineOptions({ name: 'JuitTinyEdit' })
+defineOptions({ name: 'JuitTinyEditor' })
 
 const model = defineModel({
   type: String,
