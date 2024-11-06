@@ -15,6 +15,7 @@ export default defineConfig((env) => {
   }
 
   return defineConfig({
+    base: demo ? process.env.VITE_BASE_URL : undefined,
     plugins,
     build: {
       minify: true,
