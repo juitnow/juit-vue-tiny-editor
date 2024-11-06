@@ -27,14 +27,14 @@ jobs:
       - name: Build Pages
         run: |
           npm clean-install
-          npm run build
+          npm run build-demo
         env:
           VITE_BASE_URL: "${{steps.setup.outputs.base_url}}"
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: demo
 
       - name: Deploy Pages
         uses: actions/deploy-pages@v4

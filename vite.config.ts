@@ -5,11 +5,17 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig((env) => {
   const demo = env.mode === 'demo'
-  return defineConfig({
-    plugins: [ vue(), svg(), dts({
+
+  const plugins = [ vue(), svg() ]
+  if (! demo) {
+    plugins.push(dts({
       tsconfigPath: './tsconfig.app.json',
-      rollupTypes: true,
-    }) ],
+      rollupTypes: ! demo,
+    }))
+  }
+
+  return defineConfig({
+    plugins,
     build: {
       minify: true,
       sourcemap: true,

@@ -10,9 +10,8 @@
     "./style.css": "./dist/style.css"
   },
   "scripts": {
-    "build": "npm run check && vite build --mode=demo && vite build --mode=production",
+    "build": "npm run check && vite build",
     "build-demo": "npm run check && vite build --mode=demo",
-    "build-lib": "npm run check && vite build --mode=production",
     "check": "vue-tsc --build --force && vitest run --coverage && eslint",
     "deploy-dev": "wrangler deploy",
     "deploy-prod": "wrangler deploy --env=production",
