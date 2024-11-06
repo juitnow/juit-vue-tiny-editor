@@ -4,6 +4,15 @@
       <input id="editable" v-model="editable" type="checkbox">
       <label for="editable">editable</label>
       &nbsp;-&nbsp;
+      <input
+        id="dark"
+        ref="darkRef"
+        v-model="dark"
+        type="checkbox"
+        @click="themeSelected = true"
+      >
+      <label for="dark">dark mode</label>
+      &nbsp;-&nbsp;
       <button @click.prevent="populate()">
         Sample Text
       </button>
@@ -14,6 +23,7 @@
       class="tiny-edit"
       :editable="editable"
       :mentions="mentions"
+      :dark="dark"
       @mention="mention = $event"
       @submit="console.log('submitted', $event)"
     />
@@ -29,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, watch } from 'vue'
+import { onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 
 import TinyEdit from '../lib/editor.vue'
 
@@ -151,23 +161,68 @@ Links are also supported, either parsed from text http://www.google.com/ ...
 `
 }
 
+/* ===== LIGHT/DARK SWITCHER ================================================ */
+
+/** The media query determining whether OS-level dark mode is selected or not */
+const query = window.matchMedia('(prefers-color-scheme: dark)')
+/** The initial value of our "dark" theme, according to the OS */
+const dark = ref(query.matches)
+/** Whether the user _explicitly_ selected the "dark" or "light" theme */
+const themeSelected = ref(false)
+/** Reference to our checkbox selecting the "dark" or "light" theme */
+const darkRef = ref<HTMLInputElement>()
+
+/** Update the theme ("dark" or "light") according to OS changes */
+function updateTheme(event: MediaQueryListEvent): void {
+  themeSelected.value = false // the OS takes prececence
+  dark.value = event.matches // select "dark" or "light" theme
+}
+
+/* Initial state of our theme on mount */
+onMounted(() => {
+  /* Update the theme according to the OS */
+  query.addEventListener('change', updateTheme)
+
+  const darkCheckbox = darkRef.value
+  if (! darkCheckbox) throw new Error('Dark checkbox not found')
+
+  /* Force the page's theme to "dark", "ligth" or reset to defaults */
+  watch([ themeSelected, dark ], ([ themeSelected, dark ]) => {
+    /** On OS changes, our checkbox becomes indeterminate */
+    darkCheckbox.indeterminate = !themeSelected
+
+    /** Find or create our <meta name="color-scheme" content="..."> tag */
+    let meta = document.querySelector('meta[name="color-scheme"]')
+    if (! meta) {
+      meta = document.createElement('meta')
+      meta.setAttribute('name', 'color-scheme')
+      document.head.appendChild(meta)
+    }
+
+    /** Force a specific theme ("light" or "dark") or use the OS default */
+    const theme = themeSelected ? dark ? 'dark' : 'light' : 'light dark'
+    meta.setAttribute('content', theme)
+  }, { immediate: true })
+})
+
+/* Remember to remove our event listener on unmount */
+onUnmounted(() => {
+  query.removeEventListener('change', updateTheme)
+})
+
 </script>
 
-<style lang="pcss" scoped>
+<style scoped lang="pcss">
 .demo {
   font-family: Arial, Helvetica, sans-serif;
 }
 .tiny-edit {
   margin-top: 10px;
-  border: 1px solid #ccc;
   min-height: 3em;
-  padding: 3px;
 }
 
 pre {
   margin-top: 10px;
-  background-color: #efe;
-  border: 1px solid #ccc;
   min-height: 3em;
   padding: 3px;
 }

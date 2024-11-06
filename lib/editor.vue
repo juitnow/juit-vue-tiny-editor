@@ -1,5 +1,5 @@
 <template>
-  <div ref="rootRef" class="juit-tiny-edit" :class="{ '-jte-editable': editable }">
+  <div ref="rootRef" class="juit-tiny-edit" :class="{ '-jte-editable': editable, '-jte-dark': dark }">
     <!-- our mentions popup -->
     <div ref="mentionsPopupRef" class="-jte-mentions-popup">
       <ul ref="mentionsListRef">
@@ -98,11 +98,22 @@ const props = defineProps({
     required: false,
     default: true,
   },
+  /** A flag indicating whether dark mode is enabled or not */
+  dark: {
+    type: Boolean,
+    required: false,
+    default: false,
+  },
   mentions: {
     type: Object as PropType<Record<string, string> | null>,
     required: false,
     default: () => ({}),
   },
+})
+
+watch(() => props.dark, (dark) => {
+  rootRef.value?.style.setProperty('color-scheme', dark ? 'dark light' : 'light dark')
+  // document.body.classList.toggle('dark', dark)
 })
 
 /* ==== REFS ================================================================ */
@@ -723,20 +734,114 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
 
 <style lang="pcss">
 :root {
+  --jte-border-radius: 4px;
+
+  /* ===== LIGHT THEME ====================================================== */
+
+  /* main colors */
   --jte-text: currentColor;
-  --jte-text-inactive: #999;
-  --jte-border-radius: 5px;
-  --jte-border-color: #ccc;
-  --jte-shade: #eee;
-  --jte-active-color: #ddf;
-
-  --jte-mention-color: #090;
-  --jte-mention-padding: 0.25em;
-  --jte-mention-width: 0.5em;
-
+  --jte-background: transparent;
+  --jte-active: #009;
+  --jte-mention: #99f;
   --jte-popup-background: #fff;
-  --jte-popup-font-size: 0.85em;
+  --jte-link: #009;
+  --jte-error: #933;
+
+  /* derived colors */
+  --jte-inactive: color-mix(in srgb, var(--jte-text) 50%, transparent);
+  --jte-border: color-mix(in srgb, var(--jte-text) 12.5%, transparent);
+  --jte-shade: color-mix(in srgb, var(--jte-text) 6.25%, transparent);
+  --jte-active-shade: color-mix(in srgb, var(--jte-active) 6.25%, transparent);
+
+  /* button colors */
+  --jte-button-text: var(--jte-text);
+  --jte-button-border: var(--jte-border);
+  --jte-button-background: var(--jte-background);
+
+  --jte-button-hovered-text: var(--jte-text);
+  --jte-button-hovered-border: var(--jte-border);
+  --jte-button-hovered-background: var(--jte-shade);
+
+  --jte-button-active-text: var(--jte-active);
+  --jte-button-active-border: var(--jte-border);
+  --jte-button-active-background: var(--jte-active-shade);
+
+  --jte-button-disabled-text: var(--jte-inactive);
+  --jte-button-disabled-border: var(--jte-border);
+  --jte-button-disabled-background: var(--jte-shade);
+
+  /* ===== DARK THEME ======================================================= */
+
+  /* main colors */
+  --jte-dark-text: currentColor;
+  --jte-dark-background: transparent;
+  --jte-dark-active: #99f;
+  --jte-dark-mention: #669;
+  --jte-dark-popup-background: #000;
+  --jte-dark-link: #99f;
+  --jte-dark-error: #f99;
+
+  /* derived colors */
+  --jte-dark-inactive: color-mix(in srgb, var(--jte-dark-text) 50%, transparent);
+  --jte-dark-border: color-mix(in srgb, var(--jte-dark-text) 12.5%, transparent);
+  --jte-dark-shade: color-mix(in srgb, var(--jte-dark-text) 12.5%, transparent);
+  --jte-dark-active-shade: color-mix(in srgb, var(--jte-dark-active) 6.25%, transparent);
+
+  /* button colors */
+  --jte-dark-button-text: var(--jte-dark-text);
+  --jte-dark-button-border: var(--jte-dark-border);
+  --jte-dark-button-background: var(--jte-dark-background);
+
+  --jte-dark-button-hovered-text: var(--jte-dark-text);
+  --jte-dark-button-hovered-border: var(--jte-dark-border);
+  --jte-dark-button-hovered-background: var(--jte-dark-shade);
+
+  --jte-dark-button-active-text: var(--jte-dark-active);
+  --jte-dark-button-active-border: var(--jte-dark-border);
+  --jte-dark-button-active-background: var(--jte-dark-active-shade);
+
+  --jte-dark-button-disabled-text: var(--jte-dark-inactive);
+  --jte-dark-button-disabled-border: var(--jte-dark-border);
+  --jte-dark-button-disabled-background: var(--jte-dark-shade);
 }
+
+/* ===== APPLY DARK THEME =================================================== */
+
+.juit-tiny-edit.-jte-dark {
+  /* main colors */
+  --jte-text: var(--jte-dark-text);
+  --jte-background: var(--jte-dark-background);
+  --jte-active: var(--jte-dark-active);
+  --jte-mention: var(--jte-dark-mention);
+  --jte-popup-background: var(--jte-dark-popup-background);
+  --jte-link: var(--jte-dark-link);
+  --jte-error: var(--jte-dark-error);
+
+  /* derived colors */
+  --jte-inactive: var(--jte-dark-inactive);
+  --jte-border: var(--jte-dark-border);
+  --jte-shade: var(--jte-dark-shade);
+  --jte-active-shade: var(--jte-dark-active-shade);
+
+  /* button colors */
+  --jte-button-text: var(--jte-dark-button-text);
+  --jte-button-border: var(--jte-dark-button-border);
+  --jte-button-background: var(--jte-dark-button-background);
+
+  --jte-button-hovered-text: var(--jte-dark-button-hovered-text);
+  --jte-button-hovered-border: var(--jte-dark-button-hovered-border);
+  --jte-button-hovered-background: var(--jte-dark-button-hovered-background);
+
+  --jte-button-active-text: var(--jte-dark-button-active-text);
+  --jte-button-active-border: var(--jte-dark-button-active-border);
+  --jte-button-active-background: var(--jte-dark-button-active-background);
+
+  --jte-button-disabled-text: var(--jte-dark-button-disabled-text);
+  --jte-button-disabled-border: var(--jte-dark-button-disabled-border);
+  --jte-button-disabled-background: var(--jte-dark-button-disabled-background);
+}
+
+/* ===== STYLE OUR EDITOR =================================================== */
 
 .juit-tiny-edit {
   display: flex;
@@ -744,7 +849,11 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
   align-items: stretch;
   position: relative;
   box-sizing: content-box;
+
+  color: var(--jte-text);
+  background-color: var(--jte-background);
   border-radius: var(--jte-border-radius);
+  border: 1px solid var(--jte-border);
 
   /* ===== TOOLBAR ========================================================== */
 
@@ -764,31 +873,17 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
     .-jte-icon {
       width: 1em;
       height: 1em;
-      border: 1px solid #ccc;
       padding: 0.125em 0.25em;
       margin: 0 0.25em;
-      border-radius: var(--jte-border-radius);
-      border: 1px solid var(--jte-border-color);
       vertical-align: top;
 
-      &.-jte-disabled {
-        color: var(--jte-text-inactive);
-      }
-
-      &.-jte-active {
-        background-color: var(--jte-active-color);
-      }
+      color: var(--jte-button-text);
+      background-color: var(--jte-button-background);
+      border: 1px solid var(--jte-button-border);
+      border-radius: var(--jte-border-radius);
 
       &.-jte-icon-mention {
         margin-left: 0.125em;
-      }
-
-      &:hover:not(.-jte-disabled):not(.-jte-active) {
-        background-color: var(--jte-shade);
-      }
-
-      &:active:not(.-jte-disabled) {
-        background-color: var(--jte-border-color);
       }
 
       &.-jte-icon-send {
@@ -797,8 +892,31 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
         padding-left: 1em;
         padding-right: 1em;
       }
-    }
 
+      &.-jte-disabled {
+        color: var(--jte-button-disabled-text);
+        border-color: var(--jte-button-disabled-border);
+        background-color: var(--jte-button-disabled-background);
+      }
+
+      &.-jte-active {
+        color: var(--jte-button-active-text);
+        border-color: var(--jte-button-active-border);
+        background-color: var(--jte-button-active-background);
+      }
+
+      &:active:not(.-jte-disabled) {
+        color: var(--jte-button-active-text);
+        border-color: var(--jte-button-active-border);
+        background-color: var(--jte-button-active-background);
+      }
+
+      &:hover:not(.-jte-disabled):not(.-jte-active):not(:active) {
+        color: var(--jte-button-hovered-text);
+        border-color: var(--jte-button-hovered-border);
+        background-color: var(--jte-button-hovered-background);
+      }
+    }
   }
 
   /* ===== EDITOR =========================================================== */
@@ -814,21 +932,23 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       margin-bottom: -2.5em;
     }
 
+    /** Links */
+    a {
+      color: var(--jte-link);
+    }
+
     /** Our mentions */
     link[rel="mention"] {
-      display: inline;
+      display: inline-block;
       background-color: var(--jte-shade);
 
       border-width: 1px;
       border-style: solid;
-      border-color: var(--jte-border-color);
+      border-color: var(--jte-border);
       border-radius: var(--jte-border-radius);
-      border-left-width: var(--jte-mention-width);
-      border-left-color: var(--jte-mention-color);
-      border-left-style: solid;
+      margin-top: calc(0.15em - 1px);
 
-      padding-right: var(--jte-mention-width);
-      padding-left: var(--jte-mention-padding);
+      vertical-align: top;
 
       cursor: default;
       user-select: none;
@@ -837,9 +957,20 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       text-decoration: none;
 
       font-size: 0.85em;
+      overflow: hidden;
+
+      &:before {
+        display: inline-block;
+        content: '\200B'; /* zero width space */
+        background-color: var(--jte-mention);
+        width: 0.5em;
+      }
 
       &:after {
+        display: inline-block;
         content: attr(title);
+        margin-left: 0.25em;
+        margin-right: 0.5em;
       }
     }
   }
@@ -852,12 +983,10 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
     position: absolute;
     z-index: 1000;
 
-    font-size: var(--jte-popup-font-size);
+    font-size: 0.85em;
     background-color: var(--jte-popup-background);
     border-radius: var(--jte-border-radius);
-    border-color: var(--jte-border-color);
-    border-style: solid;
-    border-width: 1px;
+    border: 1px solid var(--jte-border);
   }
 
   /* ===== MENTIONS POPUP =================================================== */
@@ -882,14 +1011,14 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       list-style-type: none;
       border-top: 1px solid transparent;
       border-bottom: 1px solid transparent;
-      color: var(--jte-text-inactive);
+      color: var(--jte-inactive);
 
       /** Inside of our mentions entry */
       .-jte-mentions-entry {
         padding-block: 0.125em;
-        padding-left: var(--jte-mention-padding);
+        padding-left: 0.25em;
         padding-right: 1.5em;
-        border-left-width: var(--jte-mention-width);
+        border-left-width: 0.5em;
         border-left-style: solid;
         border-left-color: transparent;
 
@@ -905,11 +1034,11 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       &.-jte-mentions-selected {
         color: var(--jte-text);
         background-color: var(--jte-shade);
-        border-color: var(--jte-border-color);
+        border-color: var(--jte-border);
 
         /** Apply our "tag" to the slected mention */
         .-jte-mentions-entry {
-          border-color: var(--jte-mention-color);
+          border-color: var(--jte-mention);
         }
       }
 
@@ -920,13 +1049,13 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
 
     /** Basic style for waiting / no item found */
     .-jte-mentions-waiting, .-jte-mentions-none {
-      font-size: var(--jte-popup-font-size);
-      color: var(--jte-text-inactive);
-      border-left-width: var(--jte-mention-width);
+      font-size: 0.85em;
+      color: var(--jte-inactive);
+      border-left-width: 0.5em;
       border-left-style: solid;
       border-color: transparent;
       padding-block: 0.125em;
-      padding-inline: var(--jte-mention-padding);
+      padding-inline: 0.25em;
     }
 
     /** Waiting is in italic */
@@ -951,6 +1080,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
     div {
       display: flex;
       flex-direction: row;
+      position: relative;
     }
 
     .-jte-icon {
@@ -962,9 +1092,10 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       padding: 0.125em 0.25em;
       margin: 0.25em;
 
-      border: 1px solid var(--jte-border-color);
+      color: var(--jte-button-text);
+      background-color: var(--jte-button-hovered-background);
+      border: 1px solid var(--jte-popup-background);
       border-radius: var(--jte-border-radius) 0 0 var(--jte-border-radius);
-      background-color: var(--jte-shade);
 
       z-index: 1;
     }
@@ -977,7 +1108,8 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       margin: 0.25em;
       padding: 0.125em 0.5em;
 
-      border: 1px solid var(--jte-border-color);
+      color: var(--jte-text);
+      border: 1px solid var(--jte-border);
       border-radius: var(--jte-border-radius);
       background-color: transparent;
       padding-left: 2.25em;
@@ -987,9 +1119,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
 
     .-jte-error {
       .-jte-icon, input {
-        background-color: #fee;
-        border-color: #933;
-        color: #933;
+        color: var(--jte-error);
       }
     }
   }
