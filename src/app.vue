@@ -1,26 +1,43 @@
 <template>
   <div class="demo">
+    <h3>Juit Tiny Editor Demo</h3>
+    <p>
+      This is a small demo of our <a href="https://github.com/juitnow/juit-vue-tiny-editor/">Tiny
+        Editor</a> Vue 3 component. It supports mentions (type <code>@...</code> to trigger them),
+      links, and basic formatting such as <b>bold</b> (use <code>CTRL/OPTION + B</code> as a
+      shortcut), and <i>italic</i> (use <code>CTRL/OPTION + I</code> as a shortcut).
+    </p>
+    <p>
+      To enter some sample text in the editor, simply click
+      <a href="#" @click.prevent="html = sampleText">here</a>.
+    </p>
     <form>
-      <input id="editable" v-model="editable" type="checkbox">
-      <label for="editable">editable</label>
-      &nbsp;-&nbsp;
-      <input
-        id="dark"
-        ref="darkRef"
-        v-model="dark"
-        type="checkbox"
-        @click="themeSelected = true"
-      >
-      <label for="dark">dark mode</label>
-      &nbsp;-&nbsp;
-      <button @click.prevent="populate()">
-        Sample Text
-      </button>
+      <div>
+        <input id="editable" v-model="editable" type="checkbox">
+        <label for="editable">editable</label>
+      </div>
+
+      <div>
+        <input
+          id="dark"
+          ref="darkRef"
+          v-model="dark"
+          type="checkbox"
+          @click="themeSelected = true"
+        >
+        <label for="dark">dark mode</label>
+      </div>
+
+      <div>
+        <input id="green" v-model="green" type="checkbox">
+        <label for="green">green theme</label>
+      </div>
     </form>
     <tiny-edit
       ref="editor"
       v-model="html"
       class="tiny-edit"
+      :class="{ green }"
       placeholder="Type something..."
       :editable="editable"
       :mentions="mentions"
@@ -29,6 +46,7 @@
       @submit="console.log('submitted', $event)"
     />
 
+    <h3>HTML from the editor</h3>
     <pre>{{
       html
         .replaceAll('\n', '\u21b2\n')
@@ -43,6 +61,8 @@
 import { onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 
 import TinyEdit from '../lib/editor.vue'
+
+/* ===== SAMPLE DATA ======================================================== */
 
 const allMentions = {
   'frankie@example.com': 'Frankie Fowler',
@@ -131,36 +151,47 @@ const allMentions = {
   'oliver@example.org': 'Oliver Cole',
 }
 
-function filter(value: string): Record<string, string> {
-  const entries = Object
-      .entries(allMentions)
-      .filter(([ _, v ]) => v.toLowerCase().startsWith(value.toLowerCase()))
-  return Object.fromEntries(entries)
-}
-
-const mention = ref()
-const initial = ref('a')
-const mentions = shallowRef<Record<string, string> | null>(filter(initial.value))
-
-watch(mention, (mention) => mention && (initial.value = mention.slice(0, 1)))
-watch(initial, (current) => {
-  mentions.value = null
-  setTimeout(() => mentions.value = filter(current), Math.random() * 2000)
-})
-
-const editor = ref<InstanceType<typeof TinyEdit>>()
-const editable = ref(true)
-
-const html = ref('')
-
-function populate(): void {
-  html.value = `This is some sample content...
+const sampleText = `This is some sample content...
 Content can be <b>bold</b> or <i>italic</i> (or even <i><b>both</b></i>).
 Mentions are supported, like <link rel="mention" name="simon@example.org" title="Simon Drake">.
 Links are also supported, either parsed from text http://www.google.com/ ...
 ... or with <a href="http://www.google.com">proper <b>link</b> tags</a>.
 `
-}
+
+/* ===== TEMPLATE REFERENCES ================================================ */
+
+/** Reference to our checkbox selecting the "dark" or "light" theme */
+const darkRef = ref<HTMLInputElement>()
+
+/* ===== MINIMAL DEMO FUNCTIONALITY ========================================= */
+
+/** The current HTML (bound from the editor) */
+const html = ref('')
+/** Is the editor editable or not? */
+const editable = ref(true)
+/** Apply some colors, to showcase theming */
+const green = ref(false)
+/** The current mention from the editor (e.g. "@foo") */
+const mention = ref('')
+/** The initial (first letter of the mention) lowercased  */
+const initial = ref('')
+/** The mentions to inject in the editor */
+const mentions = shallowRef<Record<string, string> | null>(null)
+
+/* Convert the "@foo" mention from the editor into an initial letter */
+watch(mention, (mention) => initial.value = mention.slice(1, 2).toLowerCase() || initial.value || 'a')
+
+/* When changing the initial letter, filter the mentions, simulating network */
+watch(initial, (initial) => {
+  if (! initial) return mentions.value = {}
+
+  mentions.value = null // this makes the editor show a loading spinner
+  setTimeout(() => {
+    const entries = Object.entries(allMentions)
+        .filter(([ _, v ]) => v.toLowerCase().startsWith(initial))
+    mentions.value = Object.fromEntries(entries) // this stops the spinner
+  }, Math.random() * 2000) // simulate network latency
+})
 
 /* ===== LIGHT/DARK SWITCHER ================================================ */
 
@@ -170,8 +201,6 @@ const query = window.matchMedia('(prefers-color-scheme: dark)')
 const dark = ref(query.matches)
 /** Whether the user _explicitly_ selected the "dark" or "light" theme */
 const themeSelected = ref(false)
-/** Reference to our checkbox selecting the "dark" or "light" theme */
-const darkRef = ref<HTMLInputElement>()
 
 /** Update the theme ("dark" or "light") according to OS changes */
 function updateTheme(event: MediaQueryListEvent): void {
@@ -210,16 +239,47 @@ onMounted(() => {
 onUnmounted(() => {
   query.removeEventListener('change', updateTheme)
 })
-
 </script>
 
 <style scoped lang="pcss">
 .demo {
   font-family: Arial, Helvetica, sans-serif;
+
+  h3 {
+    margin-bottom: 0;
+  }
+
+  code {
+    font-size: 0.85em;
+    border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+    background-color: color-mix(in srgb, currentColor 5%, transparent);
+    white-space: nowrap;
+    border-radius: 2px;
+    padding: 2px;
+  }
+
+  pre {
+    border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+    background-color: color-mix(in srgb, currentColor 5%, transparent);
+    overflow: scroll;
+  }
 }
+
 .tiny-edit {
   margin-top: 10px;
   min-height: 3em;
+}
+
+.green {
+  --jte-border-radius: 1em;
+
+  --jte-active: #090;
+  --jte-mention: #9f9;
+  --jte-link: #090;
+
+  --jte-dark-active: #9f9;
+  --jte-dark-mention: #696;
+  --jte-dark-link: #9f9;
 }
 
 pre {
