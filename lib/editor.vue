@@ -913,7 +913,6 @@ watch(mentionsText, (text) => text && emit('mention', text))
 
     .-jte-placeholder {
       position: absolute;
-      font-style: italic;
       padding: 0.25em;
       pointer-events: none;
       color: var(--jte-curr-inactive);
