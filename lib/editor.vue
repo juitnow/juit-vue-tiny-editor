@@ -742,144 +742,102 @@ const emit = defineEmits<{
 }>()
 
 /* Watch our local refs and emit */
-watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: true })
+watch(mentionsText, (text) => text && emit('mention', text))
 </script>
 
 <style lang="pcss">
-:root {
-  --jte-border-radius: 4px;
+.juit-tiny-edit {
 
-  /* ===== LIGHT THEME ====================================================== */
+  /* ===== LIGHT THEME (default) ============================================ */
 
-  /* main colors */
-  --jte-text: currentColor;
-  --jte-background: transparent;
-  --jte-active: #009;
-  --jte-mention: #99f;
-  --jte-popup: #fff;
-  --jte-link: #009;
-  --jte-error: #933;
+  .-jte-root {
+    /* border radius */
+    --jte-curr-border-radius: var(--jte-border-radius, 4px);
 
-  /* derived colors */
-  --jte-inactive: color-mix(in srgb, var(--jte-text) 50%, transparent);
-  --jte-border: color-mix(in srgb, var(--jte-text) 12.5%, transparent);
-  --jte-shade: color-mix(in srgb, var(--jte-text) 6.25%, transparent);
-  --jte-active-shade: color-mix(in srgb, var(--jte-active) 6.25%, transparent);
+    /* main colors */
+    --jte-curr-text: var(--jte-text, currentColor);
+    --jte-curr-background: var(--jte-background, transparent);
+    --jte-curr-active: var(--jte-active, #009);
+    --jte-curr-mention: var(--jte-mention, #99f);
+    --jte-curr-popup: var(--jte-popup, #fff);
+    --jte-curr-link: var(--jte-link, #009);
+    --jte-curr-error: var(--jte-error, #933);
 
-  /* button colors */
-  --jte-button-text: var(--jte-text);
-  --jte-button-border: var(--jte-border);
-  --jte-button-background: var(--jte-background);
+    /* derived colors */
+    --jte-curr-inactive: var(--jte-inactive, color-mix(in srgb, var(--jte-curr-text) 50%, transparent));
+    --jte-curr-border: var(--jte-border, color-mix(in srgb, var(--jte-curr-text) 12.5%, transparent));
+    --jte-curr-shade: var(--jte-shade, color-mix(in srgb, var(--jte-curr-text) 6.25%, transparent));
+    --jte-curr-active-shade: var(--jte-active-shade, color-mix(in srgb, var(--jte-curr-active) 6.25%, transparent));
 
-  --jte-button-hovered-text: var(--jte-text);
-  --jte-button-hovered-border: var(--jte-border);
-  --jte-button-hovered-background: var(--jte-shade);
+    /* button colors */
+    --jte-curr-button-text: var(--jte-button-text, var(--jte-curr-text));
+    --jte-curr-button-border: var(--jte-button-border, var(--jte-curr-border));
+    --jte-curr-button-background: var(--jte-button-background, var(--jte-curr-background));
 
-  --jte-button-active-text: var(--jte-active);
-  --jte-button-active-border: var(--jte-border);
-  --jte-button-active-background: var(--jte-active-shade);
+    --jte-curr-button-hovered-text: var(--jte-button-hovered-text, var(--jte-curr-text));
+    --jte-curr-button-hovered-border: var(--jte-button-hovered-border, var(--jte-curr-border));
+    --jte-curr-button-hovered-background: var(--jte-button-hovered-background, var(--jte-curr-shade));
 
-  --jte-button-disabled-text: var(--jte-inactive);
-  --jte-button-disabled-border: var(--jte-border);
-  --jte-button-disabled-background: var(--jte-shade);
+    --jte-curr-button-active-text: var(--jte-button-active-text, var(--jte-curr-active));
+    --jte-curr-button-active-border: var(--jte-button-active-border, var(--jte-curr-border));
+    --jte-curr-button-active-background: var(--jte-button-active-background, var(--jte-curr-active-shade));
 
-  /* inputs within popup */
-  --jte-input-text: var(--jte-text);
-  --jte-input-background: transparent;
-  --jte-input-border: var(--jte-border);
-  --jte-input-shade: var(--jte-shade);
+    --jte-curr-button-disabled-text: var(--jte-button-disabled-text, var(--jte-curr-inactive));
+    --jte-curr-button-disabled-border: var(--jte-button-disabled-border, var(--jte-curr-border));
+    --jte-curr-button-disabled-background: var(--jte-button-disabled-background, var(--jte-curr-shade));
+
+    /* inputs within popup */
+    --jte-curr-input-text: var(--jte-input-text, var(--jte-curr-text));
+    --jte-curr-input-background: var(--jte-input-background, transparent);
+    --jte-curr-input-border: var(--jte-input-border, var(--jte-curr-border));
+    --jte-curr-input-shade: var(--jte-input-shade, var(--jte-curr-shade));
+  }
 
   /* ===== DARK THEME ======================================================= */
 
-  /* main colors */
-  --jte-dark-text: currentColor;
-  --jte-dark-background: transparent;
-  --jte-dark-active: #99f;
-  --jte-dark-mention: #669;
-  --jte-dark-popup: #111;
-  --jte-dark-link: #99f;
-  --jte-dark-error: #f99;
-  --jte-dark-input: transparent;
-
-  /* derived colors */
-  --jte-dark-inactive: color-mix(in srgb, var(--jte-dark-text) 50%, transparent);
-  --jte-dark-border: color-mix(in srgb, var(--jte-dark-text) 12.5%, transparent);
-  --jte-dark-shade: color-mix(in srgb, var(--jte-dark-text) 12.5%, transparent);
-  --jte-dark-active-shade: color-mix(in srgb, var(--jte-dark-active) 6.25%, transparent);
-
-  /* button colors */
-  --jte-dark-button-text: var(--jte-dark-text);
-  --jte-dark-button-border: var(--jte-dark-border);
-  --jte-dark-button-background: var(--jte-dark-background);
-
-  --jte-dark-button-hovered-text: var(--jte-dark-text);
-  --jte-dark-button-hovered-border: var(--jte-dark-border);
-  --jte-dark-button-hovered-background: var(--jte-dark-shade);
-
-  --jte-dark-button-active-text: var(--jte-dark-active);
-  --jte-dark-button-active-border: var(--jte-dark-border);
-  --jte-dark-button-active-background: var(--jte-dark-active-shade);
-
-  --jte-dark-button-disabled-text: var(--jte-dark-inactive);
-  --jte-dark-button-disabled-border: var(--jte-dark-border);
-  --jte-dark-button-disabled-background: var(--jte-dark-shade);
-
-  /* inputs within popup */
-  --jte-dark-input-text: var(--jte-dark-text);
-  --jte-dark-input-background: transparent;
-  --jte-dark-input-border: var(--jte-dark-border);
-  --jte-dark-input-shade: var(--jte-dark-shade);
-}
-
-/* ========================================================================== *
- * EDITOR STYLING                                                             *
- * ========================================================================== */
-
-.juit-tiny-edit {
-
-  /* ===== APPLY DARK THEME ================================================= */
-
   &.-jte-dark .-jte-root {
     /* main colors */
-    --jte-text: var(--jte-dark-text);
-    --jte-background: var(--jte-dark-background);
-    --jte-active: var(--jte-dark-active);
-    --jte-mention: var(--jte-dark-mention);
-    --jte-popup: var(--jte-dark-popup);
-    --jte-link: var(--jte-dark-link);
-    --jte-error: var(--jte-dark-error);
+    --jte-curr-text: var(--jte-dark-text, currentColor);
+    --jte-curr-background: var(--jte-dark-background, transparent);
+    --jte-curr-active: var(--jte-dark-active, #99f);
+    --jte-curr-mention: var(--jte-dark-mention, #669);
+    --jte-curr-popup: var(--jte-dark-popup, #111);
+    --jte-curr-link: var(--jte-dark-link, #99f);
+    --jte-curr-error: var(--jte-dark-error, #f99);
 
     /* derived colors */
-    --jte-inactive: var(--jte-dark-inactive);
-    --jte-border: var(--jte-dark-border);
-    --jte-shade: var(--jte-dark-shade);
-    --jte-active-shade: var(--jte-dark-active-shade);
+    --jte-curr-inactive: var(--jte-dark-inactive, color-mix(in srgb, var(--jte-curr-text) 50%, transparent));
+    --jte-curr-border: var(--jte-dark-border, color-mix(in srgb, var(--jte-curr-text) 12.5%, transparent));
+    --jte-curr-shade: var(--jte-dark-shade, color-mix(in srgb, var(--jte-curr-text) 12.5%, transparent));
+    --jte-curr-active-shade: var(--jte-dark-active-shade, color-mix(in srgb, var(--jte-curr-active) 6.25%, transparent));
 
     /* button colors */
-    --jte-button-text: var(--jte-dark-button-text);
-    --jte-button-border: var(--jte-dark-button-border);
-    --jte-button-background: var(--jte-dark-button-background);
+    --jte-curr-button-text: var(--jte-dark-button-text, var(--jte-curr-text));
+    --jte-curr-button-border: var(--jte-dark-button-border, var(--jte-curr-border));
+    --jte-curr-button-background: var(--jte-dark-button-background, var(--jte-curr-background));
 
-    --jte-button-hovered-text: var(--jte-dark-button-hovered-text);
-    --jte-button-hovered-border: var(--jte-dark-button-hovered-border);
-    --jte-button-hovered-background: var(--jte-dark-button-hovered-background);
+    --jte-curr-button-hovered-text: var(--jte-dark-button-hovered-text, var(--jte-curr-text));
+    --jte-curr-button-hovered-border: var(--jte-dark-button-hovered-border, var(--jte-curr-border));
+    --jte-curr-button-hovered-background: var(--jte-dark-button-hovered-background, var(--jte-curr-shade));
 
-    --jte-button-active-text: var(--jte-dark-button-active-text);
-    --jte-button-active-border: var(--jte-dark-button-active-border);
-    --jte-button-active-background: var(--jte-dark-button-active-background);
+    --jte-curr-button-active-text: var(--jte-dark-button-active-text, var(--jte-curr-active));
+    --jte-curr-button-active-border: var(--jte-dark-button-active-border, var(--jte-curr-border));
+    --jte-curr-button-active-background: var(--jte-dark-button-active-background, var(--jte-curr-active-shade));
 
-    --jte-button-disabled-text: var(--jte-dark-button-disabled-text);
-    --jte-button-disabled-border: var(--jte-dark-button-disabled-border);
-    --jte-button-disabled-background: var(--jte-dark-button-disabled-background);
+    --jte-curr-button-disabled-text: var(--jte-dark-button-disabled-text, var(--jte-curr-inactive));
+    --jte-curr-button-disabled-border: var(--jte-dark-button-disabled-border, var(--jte-curr-border));
+    --jte-curr-button-disabled-background: var(--jte-dark-button-disabled-background, var(--jte-curr-shade));
 
     /* inputs within popup */
-    --jte-input-text: var(--jte-dark-input-text);
-    --jte-input-background: var(--jte-dark-input-background);
-    --jte-input-border: var(--jte-dark-input-border);
-    --jte-input-shade: var(--jte-dark-input-shade);
+    --jte-curr-input-text: var(--jte-dark-input-text, var(--jte-curr-text));
+    --jte-curr-input-background: var(--jte-dark-input-background, transparent);
+    --jte-curr-input-border: var(--jte-dark-input-border, var(--jte-curr-border));
+    --jte-curr-input-shade: var(--jte-dark-input-shade, var(--jte-curr-shade));
   }
 
-  /* ===== STYLE OUR EDITOR ================================================= */
+  /* ======================================================================== *
+   * STYLING                                                                  *
+   * ======================================================================== */
 
   .-jte-root {
     display: flex;
@@ -888,8 +846,8 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
     position: relative;
     box-sizing: content-box;
 
-    color: var(--jte-text);
-    background-color: var(--jte-background);
+    color: var(--jte-curr-text);
+    background-color: var(--jte-curr-background);
 
     /* ===== TOOLBAR ======================================================== */
 
@@ -909,10 +867,10 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
         margin: 0 0.25em;
         vertical-align: top;
 
-        color: var(--jte-button-text);
-        background-color: var(--jte-button-background);
-        border: 1px solid var(--jte-button-border);
-        border-radius: var(--jte-border-radius);
+        color: var(--jte-curr-button-text);
+        background-color: var(--jte-curr-button-background);
+        border: 1px solid var(--jte-curr-button-border);
+        border-radius: var(--jte-curr-border-radius);
 
         &.-jte-icon-mention {
           margin-left: 0.125em;
@@ -926,27 +884,27 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
         }
 
         &.-jte-disabled {
-          color: var(--jte-button-disabled-text);
-          border-color: var(--jte-button-disabled-border);
-          background-color: var(--jte-button-disabled-background);
+          color: var(--jte-curr-button-disabled-text);
+          border-color: var(--jte-curr-button-disabled-border);
+          background-color: var(--jte-curr-button-disabled-background);
         }
 
         &.-jte-active {
-          color: var(--jte-button-active-text);
-          border-color: var(--jte-button-active-border);
-          background-color: var(--jte-button-active-background);
+          color: var(--jte-curr-button-active-text);
+          border-color: var(--jte-curr-button-active-border);
+          background-color: var(--jte-curr-button-active-background);
         }
 
         &:active:not(.-jte-disabled) {
-          color: var(--jte-button-active-text);
-          border-color: var(--jte-button-active-border);
-          background-color: var(--jte-button-active-background);
+          color: var(--jte-curr-button-active-text);
+          border-color: var(--jte-curr-button-active-border);
+          background-color: var(--jte-curr-button-active-background);
         }
 
         &:hover:not(.-jte-disabled):not(.-jte-active):not(:active) {
-          color: var(--jte-button-hovered-text);
-          border-color: var(--jte-button-hovered-border);
-          background-color: var(--jte-button-hovered-background);
+          color: var(--jte-curr-button-hovered-text);
+          border-color: var(--jte-curr-button-hovered-border);
+          background-color: var(--jte-curr-button-hovered-background);
         }
       }
     }
@@ -958,7 +916,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       font-style: italic;
       padding: 0.25em;
       pointer-events: none;
-      color: var(--jte-inactive);
+      color: var(--jte-curr-inactive);
     }
 
     /* ===== EDITOR ========================================================= */
@@ -969,17 +927,17 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       padding: 0.25em;
       white-space: pre-wrap;
 
-      border-radius: var(--jte-border-radius);
-      border: 1px solid var(--jte-border);
+      border-radius: var(--jte-curr-border-radius);
+      border: 1px solid var(--jte-curr-border);
 
       &:focus {
-        outline: 1px solid var(--jte-active);
-        border: 1px solid var(--jte-active);
+        outline: 1px solid var(--jte-curr-active);
+        border: 1px solid var(--jte-curr-active);
       }
 
       /** Links */
       a {
-        color: var(--jte-link);
+        color: var(--jte-curr-link);
       }
 
       /** Our mentions (this needs to be "inline" for contenteditable to work) */
@@ -999,9 +957,9 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
           padding: 0 0.25em;
           content: '\200b'; /* zero width space */
 
-          background-color: var(--jte-mention);
-          border: 1px solid var(--jte-border);
-          border-radius: var(--jte-border-radius);
+          background-color: var(--jte-curr-mention);
+          border: 1px solid var(--jte-curr-border);
+          border-radius: var(--jte-curr-border-radius);
           border-right: none;
           border-top-right-radius: 0;
           border-bottom-right-radius: 0;
@@ -1011,9 +969,9 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
           content: attr(title);
           padding: 0 0.5em 0 0.25em;
 
-          background-color: var(--jte-shade);
-          border: 1px solid var(--jte-border);
-          border-radius: var(--jte-border-radius);
+          background-color: var(--jte-curr-shade);
+          border: 1px solid var(--jte-curr-border);
+          border-radius: var(--jte-curr-border-radius);
           border-left: none;
           border-top-left-radius: 0;
           border-bottom-left-radius: 0;
@@ -1030,9 +988,9 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       z-index: 1000;
 
       font-size: 0.85em;
-      background-color: var(--jte-popup);
-      border-radius: var(--jte-border-radius);
-      border: 1px solid var(--jte-border);
+      background-color: var(--jte-curr-popup);
+      border-radius: var(--jte-curr-border-radius);
+      border: 1px solid var(--jte-curr-border);
     }
 
     /* ===== MENTIONS POPUP ================================================= */
@@ -1057,7 +1015,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
         list-style-type: none;
         border-top: 1px solid transparent;
         border-bottom: 1px solid transparent;
-        color: var(--jte-inactive);
+        color: var(--jte-curr-inactive);
 
         /** Inside of our mentions entry */
         .-jte-mentions-entry {
@@ -1078,13 +1036,13 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
 
         /** Selected list item */
         &.-jte-mentions-selected {
-          color: var(--jte-input-text);
-          background-color: var(--jte-shade);
-          border-color: var(--jte-input-border);
+          color: var(--jte-curr-input-text);
+          background-color: var(--jte-curr-shade);
+          border-color: var(--jte-curr-input-border);
 
           /** Apply our "tag" to the slected mention */
           .-jte-mentions-entry {
-            border-color: var(--jte-mention);
+            border-color: var(--jte-curr-mention);
           }
         }
 
@@ -1096,7 +1054,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
       /** Basic style for waiting / no item found */
       .-jte-mentions-waiting, .-jte-mentions-none {
         font-size: 0.85em;
-        color: var(--jte-inactive);
+        color: var(--jte-curr-inactive);
         border-left-width: 0.5em;
         border-left-style: solid;
         border-color: transparent;
@@ -1111,7 +1069,7 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
 
       /** None has a grey tab */
       .-jte-mentions-none {
-        border-color: var(--jte-shade);
+        border-color: var(--jte-curr-shade);
       }
     }
 
@@ -1128,8 +1086,8 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
         flex-direction: row;
         margin: 0.25em;
         position: relative;
-        background-color: var(--jte-input-background);
-        border-radius: var(--jte-border-radius);
+        background-color: var(--jte-curr-input-background);
+        border-radius: var(--jte-curr-border-radius);
       }
 
       .-jte-icon {
@@ -1144,10 +1102,10 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
         padding: 0.125em 0.25em;
         margin: 0;
 
-        color: var(--jte-input-text);
-        background-color: var(--jte-input-shade);
+        color: var(--jte-curr-input-text);
+        background-color: var(--jte-curr-input-shade);
         border: none;
-        border-radius: calc(var(--jte-border-radius) - 1px);
+        border-radius: calc(var(--jte-curr-border-radius) - 1px);
         border-top-right-radius: 0;
         border-bottom-right-radius: 0;
         border-right: none;
@@ -1162,20 +1120,20 @@ watch(mentionsText, (text) => emit('mention', text.substring(1)), { immediate: t
         padding: 0.125em 0.25em 0.125em 2.25em;
         margin: 0;
 
-        color: var(--jte-input-text);
-        border: 1px solid var(--jte-input-border);
-        border-radius: var(--jte-border-radius);
+        color: var(--jte-curr-input-text);
+        border: 1px solid var(--jte-curr-input-border);
+        border-radius: var(--jte-curr-border-radius);
         background-color: transparent;
 
         &:focus {
-          outline: 1px solid var(--jte-active);
-          border: 1px solid var(--jte-active);
+          outline: 1px solid var(--jte-curr-active);
+          border: 1px solid var(--jte-curr-active);
         }
       }
 
       .-jte-error {
         .-jte-icon, input {
-          color: var(--jte-error);
+          color: var(--jte-curr-error);
         }
       }
     }
