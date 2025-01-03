@@ -1,6 +1,6 @@
 {
   "name": "@juit/vue-tiny-editor",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "type": "module",
   "exports": {
     ".": {
@@ -20,7 +20,7 @@
     "vue": "^3.5.13"
   },
   "devDependencies": {
-    "@plugjs/eslint-plugin": "^0.3.4",
+    "@plugjs/eslint-plugin": "^0.3.5",
     "@types/node": "<21",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vitest/coverage-v8": "^2.1.8",
