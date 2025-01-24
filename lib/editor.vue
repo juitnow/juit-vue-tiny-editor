@@ -569,7 +569,10 @@ onMounted(() => {
   watch(model, (model) => {
     if (model === html.value) return // no changes, ignore!
 
-    const body = new DOMParser().parseFromString(model, 'text/html').body
+    // wrap the text in <html><body>...</body></html>, if we don't do it then
+    // any initial <link> tag will be moved to the <head> of the document...
+    const string = `<html><body>${model}</body></html>`
+    const body = new DOMParser().parseFromString(string, 'text/html').body
     sanitize(body)
     editor.replaceChildren(...body.childNodes)
     commit()
