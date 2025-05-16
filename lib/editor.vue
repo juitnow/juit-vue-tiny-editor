@@ -62,7 +62,12 @@
         <iconBold class="-jte-icon -jte-icon-bold" :class="iconClass(isBold, 'b')" @click="applyTag('b')" />
         <iconItalic class="-jte-icon -jte-icon-italic" :class="iconClass(isItalic, 'i')" @click="applyTag('i')" />
         <iconLink class="-jte-icon -jte-icon-href" :class="iconClass(isLink)" @click="applyTag('a', { href: 'http://__placeholder__/' })" />
-        <iconSend class="-jte-icon -jte-icon-send" :class="{ '-jte-disabled': !html, '-jte-active': !!html }" @click="submit" />
+        <iconSend
+          v-if="onSubmit"
+          class="-jte-icon -jte-icon-send"
+          :class="{ '-jte-disabled': !html, '-jte-active': !!html }"
+          @click="submit"
+        />
       </div>
     </div>
   </div>
@@ -121,6 +126,18 @@ const props = defineProps({
     type: Object as PropType<Record<string, string> | null>,
     required: false,
     default: () => ({}),
+  },
+  /** Used as `@mention="..."`, notify the current mention text (`@abc...`) */
+  onMention: {
+    type: Function as PropType<((text: string) => any) | undefined>,
+    required: false,
+    default: undefined,
+  },
+  /** Used as `@submit="..."`, will display the send button and emit HTML */
+  onSubmit: {
+    type: Function as PropType<((html: string) => any) | undefined>,
+    required: false,
+    default: undefined,
   },
 })
 
@@ -367,7 +384,7 @@ function selectWithOffsets(offsets: Offsets, collapse?: boolean): void {
 
 function submit(): void {
   if (! html.value) return
-  emit('submit', html.value)
+  props.onSubmit?.(html.value)
 }
 
 /* ==== DOM EVENTS ========================================================== */
@@ -543,6 +560,9 @@ function onSelectionChange(_event: Event): void {
 }
 
 /* ===== WATCHES AND COMPONENT LIFECYCLE ==================================== */
+
+/* Watch our local refs and emit */
+watch(mentionsText, (text) => text && props.onMention?.(text))
 
 onMounted(() => {
   // Bind DOM events
@@ -736,16 +756,6 @@ onUnmounted(() => {
   document.removeEventListener('selectionchange', onSelectionChange)
   if (dotsInterval) clearInterval(dotsInterval)
 })
-
-/* ===== EMITS AND EXPOSED METHODS ========================================== */
-
-const emit = defineEmits<{
-  mention: [ string ],
-  submit: [ string ],
-}>()
-
-/* Watch our local refs and emit */
-watch(mentionsText, (text) => text && emit('mention', text))
 </script>
 
 <style lang="pcss">
