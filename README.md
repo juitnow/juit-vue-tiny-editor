@@ -26,7 +26,8 @@ can be used to inject the initial text to be edited.
 
 * `mention`: The `string` of the mention being typed (for example `@x`).
 * `submit`: When the send button is clicked, the `string` parameter will contain
-            the HTML contents of the editor.
+            the HTML contents of the editor. When this emit is not listened to
+            the _send_ button is not displayed.
 
 #### HTML format
 
