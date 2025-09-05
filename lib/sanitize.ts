@@ -153,13 +153,13 @@ export function mergeOffsets(list: (Offsets & { href: string })[]): (Offsets & {
   // Sort by start, keep longest first, if seame, the first one has priority
   offsets.sort((a, b) => {
     return a.start < b.start ? -1 :
-           a.start > b.start ? 1 :
-           a.end < b.end ? 1 :
-           a.end > b.end ? -1 :
-           /* v8 ignore next 3 */
-           a.index < b.index ? -1 :
-           a.index > b.index ? 1 :
-           0
+      a.start > b.start ? 1 :
+      a.end < b.end ? 1 :
+      a.end > b.end ? -1 :
+      /* v8 ignore next 3 */
+      a.index < b.index ? -1 :
+      a.index > b.index ? 1 :
+      0
   })
 
   // Find all ranges that are nested/overlapping within another range

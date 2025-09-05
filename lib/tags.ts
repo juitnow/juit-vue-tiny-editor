@@ -55,8 +55,8 @@ export function toggleTag(
   const ancestor = isTagged(parent, range, tagName)
 
   const ancestorRange = ancestor ?
-      rangeFromNode(ancestor) :
-      rangeFromContents(range.commonAncestorContainer)
+    rangeFromNode(ancestor) :
+    rangeFromContents(range.commonAncestorContainer)
 
   const before = document.createRange()
   before.setStart(ancestorRange.startContainer, ancestorRange.startOffset)

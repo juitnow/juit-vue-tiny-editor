@@ -19,9 +19,9 @@ export function getSelectionRange(
   if (! containsRange(parent, selectionRange)) return null
 
   const backwards =
-        selection.isCollapsed ? false :
-        selection.anchorNode === selection.focusNode ? selection.anchorOffset > selection.focusOffset :
-        selection.anchorNode!.compareDocumentPosition(selection.focusNode!) === Node.DOCUMENT_POSITION_PRECEDING
+    selection.isCollapsed ? false :
+    selection.anchorNode === selection.focusNode ? selection.anchorOffset > selection.focusOffset :
+    selection.anchorNode!.compareDocumentPosition(selection.focusNode!) === Node.DOCUMENT_POSITION_PRECEDING
   return Object.assign(selectionRange, { backwards })
 }
 
