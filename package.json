@@ -1,6 +1,6 @@
 {
   "name": "@juit/vue-tiny-editor",
-  "version": "1.0.43",
+  "version": "1.0.44",
   "type": "module",
   "exports": {
     ".": {
@@ -17,24 +17,24 @@
     "test": "vitest"
   },
   "peerDependencies": {
-    "vue": "^3.5.21"
+    "vue": "^3.5.22"
   },
   "devDependencies": {
-    "@plugjs/eslint-plugin": "^0.5.2",
+    "@plugjs/eslint-plugin": "^0.5.3",
     "@types/node": "<21",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vitest/coverage-v8": "^3.2.4",
     "@vue/test-utils": "^2.4.6",
-    "eslint": "^9.35.0",
-    "eslint-plugin-vue": "^10.4.0",
+    "eslint": "^9.36.0",
+    "eslint-plugin-vue": "^10.5.0",
     "jsdom": "^27.0.0",
     "typescript": "<5.7",
     "vite": "<6",
     "vite-plugin-dts": "^4.5.4",
     "vite-svg-loader": "^5.1.0",
     "vitest": "^3.2.4",
-    "vue": "^3.5.21",
-    "vue-tsc": "^3.0.7"
+    "vue": "^3.5.22",
+    "vue-tsc": "^3.0.8"
   },
   "author": "Juit Developers <developers@juit.com>",
   "license": "Apache-2.0",
