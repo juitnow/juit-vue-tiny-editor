@@ -1,7 +1,9 @@
+/// <reference types="vitest/config" />
+import { defineConfig } from 'vite'
+// vite plugins
 import vue from '@vitejs/plugin-vue'
 import dts from 'vite-plugin-dts'
 import svg from 'vite-svg-loader'
-import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [ vue(), svg(), dts({
