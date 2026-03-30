@@ -140,7 +140,6 @@ export function getOffsetsRange(
       foundStart = true
       range.setStart(text, start)
       if (start === end) {
-        foundEnd = 'extra'
         range.setEnd(text, end)
         return range
       }
@@ -151,7 +150,6 @@ export function getOffsetsRange(
       foundEnd = true
       range.setEnd(text, end)
       if (end === start) {
-        foundStart = 'extra'
         range.setStart(text, start)
         return range
       }
