@@ -1,14 +1,13 @@
-/// <reference types="vitest/config" />
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 // vite plugins
 import vue from '@vitejs/plugin-vue'
-import dts from 'vite-plugin-dts'
+import dts from 'unplugin-dts/vite'
 import svg from 'vite-svg-loader'
 
 export default defineConfig({
   plugins: [ vue(), svg(), dts({
     tsconfigPath: './tsconfig.app.json',
-    rollupTypes: true,
+    bundleTypes: true,
   }) ],
 
   build: {
