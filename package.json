@@ -1,6 +1,6 @@
 {
   "name": "@juit/vue-tiny-editor",
-  "version": "1.0.81",
+  "version": "1.0.82",
   "type": "module",
   "exports": {
     ".": {
@@ -30,7 +30,7 @@
     "jsdom": "^30.0.1",
     "typescript": "<7",
     "unplugin-dts": "^1.0.3",
-    "vite": "^8.1.5",
+    "vite": "^8.2.0",
     "vite-svg-loader": "^5.1.1",
     "vitest": "^4.1.10",
     "vue": "^3.5.40",
